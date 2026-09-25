@@ -1,11 +1,23 @@
+import os
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.security.auth import validate_bearer_token
 from src.services.prediction import predict_symbol
 
-app = FastAPI(title="UK Market AI Trader", version="0.2.0")
+app = FastAPI(title="UK Market AI Trader", version="0.3.0")
+
+frontend_origin = os.getenv("FRONTEND_ORIGIN", "").strip()
+if frontend_origin:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[frontend_origin],
+        allow_credentials=False,
+        allow_methods=["GET", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
 
 AuthClaims = Annotated[dict, Depends(validate_bearer_token)]
 
