@@ -19,6 +19,13 @@ done
 
 az group create --name "$RESOURCE_GROUP" --location "$LOCATION" --output none
 
+OWNER="${GITHUB_REPO%%/*}"
+REPO="${GITHUB_REPO##*/}"
+REPO_JSON=$(curl -fsSL "https://api.github.com/repos/$GITHUB_REPO")
+OWNER_ID=$(printf '%s' "$REPO_JSON" | python -c 'import json,sys; print(json.load(sys.stdin)["owner"]["id"])')
+REPO_ID=$(printf '%s' "$REPO_JSON" | python -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+FEDERATED_SUBJECT="repo:${OWNER}@${OWNER_ID}/${REPO}@${REPO_ID}:ref:refs/heads/main"
+
 CLIENT_ID=$(az ad app create --display-name "$APP_NAME" --query appId -o tsv)
 APP_OBJECT_ID=$(az ad app show --id "$CLIENT_ID" --query id -o tsv)
 SP_OBJECT_ID=$(az ad sp create --id "$CLIENT_ID" --query id -o tsv)
@@ -27,7 +34,7 @@ cat >/tmp/github-federated-credential.json <<EOF
 {
   "name": "github-main",
   "issuer": "https://token.actions.githubusercontent.com",
-  "subject": "repo:$GITHUB_REPO:ref:refs/heads/main",
+  "subject": "$FEDERATED_SUBJECT",
   "description": "GitHub Actions main branch",
   "audiences": ["api://AzureADTokenExchange"]
 }
@@ -57,6 +64,9 @@ az role assignment create \
 cat <<EOF
 
 GitHub OIDC identity created.
+
+Federated subject:
+$FEDERATED_SUBJECT
 
 Add these as GitHub repository VARIABLES:
 AZURE_CLIENT_ID=$CLIENT_ID
