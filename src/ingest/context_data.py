@@ -1,9 +1,19 @@
 from __future__ import annotations
 
+from functools import lru_cache
+
 import pandas as pd
 import yfinance as yf
 
+from src.ingest.market_data import sector_proxy_ticker
 from src.markets import get_market
+
+RISK_TICKERS = {
+    "vix": "^VIX",
+    "us10y": "^TNX",
+    "oil": "CL=F",
+    "gold": "GC=F",
+}
 
 
 def _download_close(symbol: str, period: str) -> pd.Series:
@@ -29,12 +39,34 @@ def _download_first_available(candidates: tuple[str, ...], period: str) -> pd.Se
     raise ValueError(f"No context data available from configured tickers. {joined}")
 
 
-def load_market_context(market: str = "uk", period: str = "5y") -> pd.DataFrame:
-    """Load daily market-index and FX context for the selected market."""
+def _optional_close(symbol: str, period: str, fallback: pd.Series) -> pd.Series:
+    try:
+        return _download_close(symbol, period)
+    except Exception:
+        return fallback.copy()
+
+
+@lru_cache(maxsize=128)
+def load_market_context(
+    market: str = "uk",
+    period: str = "5y",
+    symbol: str | None = None,
+) -> pd.DataFrame:
+    """Load market, FX, sector and global risk context for daily modelling."""
     config = get_market(market)
 
     out = pd.DataFrame()
     out["market_close"] = _download_first_available(config.index_tickers, period)
     out["fx_close"] = _download_first_available(config.fx_tickers, period)
+
+    sector_ticker = sector_proxy_ticker(symbol) if symbol else None
+    out["sector_close"] = (
+        _optional_close(sector_ticker, period, out["market_close"])
+        if sector_ticker
+        else out["market_close"].copy()
+    )
+
+    for name, ticker in RISK_TICKERS.items():
+        out[f"{name}_close"] = _optional_close(ticker, period, out["market_close"])
 
     return out.sort_index().ffill()
