@@ -161,6 +161,28 @@ jobs:
             --overwrite \
             --output none
 
+          az storage blob upload \
+            --account-name "${{ steps.infra.outputs.frontend_storage }}" \
+            --account-key "$ACCOUNT_KEY" \
+            --container-name '$web' \
+            --name index.html \
+            --file frontend/dist/index.html \
+            --overwrite \
+            --content-type "text/html" \
+            --content-cache-control "no-store, no-cache, must-revalidate" \
+            --output none
+
+          az storage blob upload \
+            --account-name "${{ steps.infra.outputs.frontend_storage }}" \
+            --account-key "$ACCOUNT_KEY" \
+            --container-name '$web' \
+            --name config.js \
+            --file frontend/dist/config.js \
+            --overwrite \
+            --content-type "application/javascript" \
+            --content-cache-control "no-store, no-cache, must-revalidate" \
+            --output none
+
       - name: Smoke test API and frontend
         shell: bash
         run: |
