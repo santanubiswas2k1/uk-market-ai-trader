@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from src.ingest import news
 
@@ -19,4 +19,4 @@ def test_headline_supports_nested_provider_shape():
 
     assert news._headline(item) == "Company posts strong growth"
     published = news._published_at(item)
-    assert published == datetime(2026, 9, 25, 12, 0, tzinfo=timezone.utc)
+    assert published == datetime(2026, 9, 25, 12, 0, tzinfo=UTC)
