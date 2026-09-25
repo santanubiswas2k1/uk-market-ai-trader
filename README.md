@@ -1,13 +1,14 @@
-# UK Market AI Trader
+# Global Market AI Trader
 
-Azure-first research platform for UK equity market prediction and paper trading.
+Azure-first research platform for multi-market equity prediction and paper trading.
 
 ## Current MVP
 
-- LSE/FTSE research universe
-- Daily UK equity market-data ingestion
-- FTSE 100 context features
-- GBP/USD context features
+- Multi-market research universe: UK, US, India, UAE, Canada, Europe, Hong Kong, Japan and Australia
+- Company-name lookup filtered to the selected market
+- Daily equity market-data ingestion
+- Market-specific broad-index context
+- Market-specific FX context
 - Technical feature engineering
 - Normalized RNS event feature pipeline
 - Generic UK macro-series normalization for Bank Rate/CPI-style data
@@ -24,13 +25,13 @@ Azure-first research platform for UK equity market prediction and paper trading.
 
 The default runnable predictor uses a five-model equal-weight ensemble over:
 
-- individual LSE share price/volume
+- individual share price/volume
 - 1-day and 5-day share returns
 - rolling volatility and moving-average gap
 - volume z-score
-- FTSE 100 1-day and 5-day returns
-- GBP/USD 1-day and 5-day returns
-- share return relative to the FTSE 100
+- selected market index 1-day and 5-day returns
+- selected market FX/proxy 1-day and 5-day returns
+- share return relative to the selected market index
 
 The repository also includes normalized feature adapters for **RNS announcements** and **UK macro series**. These are intentionally data-provider-neutral: production use should ingest data from an appropriately licensed/official source and pass it into the normalization layer rather than scrape websites.
 
@@ -46,9 +47,9 @@ pytest
 Run a research prediction:
 
 ```bash
-uk-market-predict BARC.L
-# or
-python -m src.cli BARC.L
+uk-market-predict BARC.L --market uk
+uk-market-predict AAPL --market us
+uk-market-predict RELIANCE.NS --market india
 ```
 
 Run the API:
@@ -59,9 +60,10 @@ uvicorn src.api.main:app --reload
 
 - `GET /health` is public.
 - `GET /me` validates a Microsoft Entra ID bearer token.
-- `GET /predict/{symbol}` is protected and returns the next-day research probability.
+- `GET /symbols/search?q=Apple&market=us` performs protected company lookup.
+- `GET /predict/{symbol}?market=us` is protected and returns the next-day research probability.
 
-Example symbols: `BARC.L`, `LLOY.L`, `SHEL.L`, `AZN.L`.
+Example symbols: `BARC.L`, `AAPL`, `RELIANCE.NS`, `RY.TO`, `SAP.DE`, `0700.HK`, `7203.T`, `BHP.AX`.
 
 ## Prediction interpretation
 
@@ -79,7 +81,7 @@ The output contains:
 
 The walk-forward test repeatedly trains only on historical observations occurring before each test window. This is substantially more realistic than randomly shuffling financial time-series data.
 
-The returned `close_price` is the source quotation value. Many London-listed equities are quoted in **GBp (pence)** rather than GBP.
+The returned `close_price` is the source quotation value and therefore uses the quotation convention of the selected exchange. Many London-listed equities, for example, are quoted in **GBp (pence)** rather than GBP.
 
 ## Azure serverless deployment
 
