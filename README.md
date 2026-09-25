@@ -113,3 +113,14 @@ Do not commit API keys, broker credentials, database passwords, or other secrets
 This repository is for research and paper trading. The current free/delayed price source is suitable for prototyping, not necessarily production or live trading. Model probabilities are not guaranteed to be calibrated and are not financial advice.
 
 Before live use, validate data licensing, spread/slippage, transaction costs, corporate actions, survivorship bias, look-ahead bias, release-time alignment for macro/RNS data, probability calibration, walk-forward stability, and operational controls.
+
+
+## Forward prediction accuracy
+
+Each first daily live forecast is stored in Azure Blob Storage and later
+reconciled against the next completed trading-day close. The dashboard reports
+direction accuracy, signal accuracy, Brier score, expected-close error, return
+error and predicted-range hit rate.
+
+See [docs/prediction-accuracy.md](docs/prediction-accuracy.md) for the ledger
+format and metric definitions.
