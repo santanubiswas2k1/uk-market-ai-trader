@@ -97,3 +97,23 @@ export async function getPerformance(market = "") {
   }
   return payload;
 }
+
+
+export async function getScanner(market = "uk", limit = 10) {
+  const token = await getAccessToken();
+  const response = await fetch(
+    apiUrl(
+      `/scanner?market=${encodeURIComponent(market)}&limit=${encodeURIComponent(limit)}`,
+    ),
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    },
+  );
+
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.detail || `Scanner request failed: ${response.status}`);
+  }
+  return payload;
+}
