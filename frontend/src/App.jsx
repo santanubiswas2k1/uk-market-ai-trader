@@ -92,10 +92,36 @@ export default function App() {
       </header>
 
       <main>
+        <section className="auth-panel">
+          <div>
+            <div className="eyebrow">MICROSOFT ENTRA ID</div>
+            <h3>{account ? `Signed in as ${displayName}` : "Sign in to access predictions"}</h3>
+            <p>
+              {account
+                ? "Authentication is active. You can now run protected market predictions."
+                : "Use your Microsoft account to authenticate before running predictions."}
+            </p>
+          </div>
+          <div className="auth-actions">
+            {account ? (
+              <button className="ghost" onClick={signOut}>Sign out</button>
+            ) : (
+              <button className="primary auth-button" onClick={signIn} disabled={!configured}>
+                Sign in with Microsoft
+              </button>
+            )}
+          </div>
+        </section>
+
         {!configured && (
-          <div className="alert">
-            Frontend runtime configuration is incomplete. Deploy through the Azure
-            workflow after configuring the SPA client registration.
+          <div className="alert error">
+            <strong>Frontend authentication configuration is incomplete.</strong>
+            <div className="config-diagnostics">
+              <span>API URL: {config.apiBaseUrl ? "loaded" : "missing"}</span>
+              <span>Client ID: {config.entraClientId ? "loaded" : "missing"}</span>
+              <span>Tenant ID: {config.tenantId ? "loaded" : "missing"}</span>
+              <span>API scope: {config.apiScope ? "loaded" : "missing"}</span>
+            </div>
           </div>
         )}
 
@@ -153,10 +179,10 @@ export default function App() {
 
         {!account && (
           <section className="empty-state">
-            <h3>Sign in to access predictions</h3>
+            <h3>Authentication required</h3>
             <p>
-              Authentication uses Microsoft Entra ID. Your access token is kept in
-              the browser session and sent only to the protected API.
+              Use the Microsoft sign-in button above. Your access token stays in
+              the browser session and is sent only to the protected API.
             </p>
           </section>
         )}
