@@ -5,6 +5,14 @@ import { config } from "./config";
 
 const quickSymbols = ["BARC.L", "LLOY.L", "SHEL.L", "AZN.L", "BP.L", "GSK.L"];
 
+const modelLabels = {
+  logistic_regression: "Logistic Regression",
+  random_forest: "Random Forest",
+  xgboost: "XGBoost",
+  lightgbm: "LightGBM",
+  catboost: "CatBoost",
+};
+
 function pct(value) {
   return typeof value === "number" ? `${(value * 100).toFixed(1)}%` : "—";
 }
@@ -130,8 +138,8 @@ export default function App() {
             <div className="eyebrow">NEXT TRADING DAY RESEARCH</div>
             <h2>UK equity direction signals with market context</h2>
             <p>
-              XGBoost model using LSE price/volume, FTSE 100 context and GBP/USD.
-              Evaluation uses expanding-window walk-forward testing.
+              Five-model ensemble using Logistic Regression, Random Forest, XGBoost,
+              LightGBM and CatBoost with LSE price/volume, FTSE 100 context and GBP/USD.
             </p>
           </div>
           <div className="research-note">
@@ -229,6 +237,39 @@ export default function App() {
                 </div>
                 <div className="muted">Source quotation units</div>
               </article>
+            </section>
+
+            <section className="ensemble-panel">
+              <div className="ensemble-heading">
+                <div>
+                  <div className="eyebrow">ENSEMBLE BREAKDOWN</div>
+                  <h3>Individual model probabilities</h3>
+                </div>
+                <div className="ensemble-meta">
+                  <span>{prediction.ensemble_method || "equal_weight"}</span>
+                  <span>{prediction.model_source || "trained"}</span>
+                </div>
+              </div>
+
+              <div className="model-grid">
+                {Object.entries(prediction.model_probabilities || {}).map(([name, value]) => {
+                  const metrics = prediction.model_metrics?.[name];
+                  return (
+                    <article className="model-card" key={name}>
+                      <div className="model-name">{modelLabels[name] || name}</div>
+                      <div className="model-probability">{pct(value)}</div>
+                      <div className="progress">
+                        <span style={{ width: pct(value) }} />
+                      </div>
+                      <div className="model-stats">
+                        <span>Weight {pct(prediction.model_weights?.[name])}</span>
+                        <span>WF acc {pct(metrics?.accuracy)}</span>
+                        <span>Brier {metric(metrics?.brier)}</span>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
             </section>
 
             <section className="metrics">
