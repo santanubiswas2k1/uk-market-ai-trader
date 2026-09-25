@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { getHealth, getPrediction } from "./api";
 import { initialiseAuth, msal, signIn, signOut } from "./auth";
 import { config } from "./config";
