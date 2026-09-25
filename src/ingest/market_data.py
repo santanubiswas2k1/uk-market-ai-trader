@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from functools import lru_cache
+
 import pandas as pd
 import yfinance as yf
 
@@ -15,6 +17,21 @@ DEFAULT_UNIVERSE = [
     "ULVR.L",
     "NG.L",
 ]
+
+SECTOR_ETFS = {
+    "technology": "XLK",
+    "financial services": "XLF",
+    "financial": "XLF",
+    "healthcare": "XLV",
+    "energy": "XLE",
+    "consumer cyclical": "XLY",
+    "consumer defensive": "XLP",
+    "industrials": "XLI",
+    "basic materials": "XLB",
+    "real estate": "XLRE",
+    "utilities": "XLU",
+    "communication services": "XLC",
+}
 
 
 def load_daily_history(symbol: str, period: str = "5y") -> pd.DataFrame:
@@ -34,3 +51,22 @@ def load_daily_history(symbol: str, period: str = "5y") -> pd.DataFrame:
     df.index = pd.to_datetime(df.index, utc=True)
     df["symbol"] = symbol
     return df
+
+
+@lru_cache(maxsize=256)
+def get_symbol_sector(symbol: str) -> str | None:
+    """Return the provider-reported sector when available."""
+    try:
+        info = yf.Ticker(symbol).info or {}
+    except Exception:
+        return None
+
+    sector = info.get("sector")
+    return str(sector).strip() if sector else None
+
+
+def sector_proxy_ticker(symbol: str) -> str | None:
+    sector = get_symbol_sector(symbol)
+    if not sector:
+        return None
+    return SECTOR_ETFS.get(sector.casefold())
