@@ -8,6 +8,7 @@ param tenantId string
 param apiAudience string
 param image string
 param frontendOrigin string
+param modelStorageAccountUrl string
 
 resource environment 'Microsoft.App/managedEnvironments@2024-03-01' existing = {
   name: environmentName
@@ -72,6 +73,10 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'FRONTEND_ORIGIN'
               value: frontendOrigin
+            }
+            {
+              name: 'MODEL_STORAGE_ACCOUNT_URL'
+              value: modelStorageAccountUrl
             }
           ]
           resources: {
