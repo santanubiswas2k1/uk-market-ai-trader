@@ -172,6 +172,17 @@ def _integer(payload: dict, key: str) -> int | None:
         return None
 
 
+@app.route(route="health", methods=["GET"])
+def health(request: func.HttpRequest) -> func.HttpResponse:
+    return _json_response(
+        {
+            "status": "ok",
+            "service": "market-feed",
+            "provider": "Twelve Data",
+        }
+    )
+
+
 @app.route(route="quote", methods=["GET", "OPTIONS"])
 def quote(request: func.HttpRequest) -> func.HttpResponse:
     if request.method == "OPTIONS":
