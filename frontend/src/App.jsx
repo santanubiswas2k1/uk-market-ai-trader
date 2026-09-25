@@ -3,7 +3,31 @@ import { getHealth, getPrediction, searchSymbols } from "./api";
 import { initialiseAuth, msal, signIn, signOut } from "./auth";
 import { config } from "./config";
 
-const quickSymbols = ["BARC.L", "LLOY.L", "SHEL.L", "AZN.L", "BP.L", "GSK.L"];
+const quickSymbols = {
+  uk: ["BARC.L", "LLOY.L", "SHEL.L", "AZN.L", "BP.L", "GSK.L"],
+  us: ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META"],
+};
+
+const marketConfig = {
+  uk: {
+    label: "UK / LSE",
+    searchLabel: "Find a London-listed company",
+    placeholder: "Search by company name or ticker, e.g. Barclays",
+    directLabel: "Direct LSE ticker",
+    tickerPlaceholder: "BARC.L",
+    description:
+      "Five-model ensemble using LSE price/volume, FTSE 100 context and GBP/USD.",
+  },
+  us: {
+    label: "US / NYSE & NASDAQ",
+    searchLabel: "Find a US-listed company",
+    placeholder: "Search by company name or ticker, e.g. Apple",
+    directLabel: "Direct US ticker",
+    tickerPlaceholder: "AAPL",
+    description:
+      "US market support is being added with S&P 500, NASDAQ and volatility context.",
+  },
+};
 
 const modelLabels = {
   logistic_regression: "Logistic Regression",
@@ -29,6 +53,7 @@ function SignalBadge({ signal }) {
 export default function App() {
   const [account, setAccount] = useState(null);
   const [health, setHealth] = useState("checking");
+  const [market, setMarket] = useState("uk");
   const [symbol, setSymbol] = useState("BARC.L");
   const [companyQuery, setCompanyQuery] = useState("");
   const [symbolMatches, setSymbolMatches] = useState([]);
@@ -67,6 +92,11 @@ export default function App() {
       return undefined;
     }
 
+    if (market !== "uk") {
+      setSymbolMatches([]);
+      return undefined;
+    }
+
     const query = companyQuery.trim();
     if (query.length < 2) {
       setSymbolMatches([]);
@@ -87,7 +117,7 @@ export default function App() {
     }, 350);
 
     return () => window.clearTimeout(timer);
-  }, [companyQuery, account]);
+  }, [companyQuery, account, market]);
 
   function chooseCompany(match) {
     setSelectedCompany(match);
@@ -114,6 +144,17 @@ export default function App() {
     }
   }
 
+  function changeMarket(nextMarket) {
+    setMarket(nextMarket);
+    setPrediction(null);
+    setMessage("");
+    setCompanyQuery("");
+    setSelectedCompany(null);
+    setSymbolMatches([]);
+    setSymbol(nextMarket === "uk" ? "BARC.L" : "AAPL");
+  }
+
+  const currentMarket = marketConfig[market];
   const displayName = account?.name || account?.username || "Signed-in user";
 
   return (
@@ -173,13 +214,32 @@ export default function App() {
           </div>
         )}
 
+        <section className="market-selector-panel">
+          <div>
+            <div className="eyebrow">MARKET</div>
+            <h3>Select market</h3>
+          </div>
+          <div className="market-switcher" role="group" aria-label="Market selector">
+            {Object.entries(marketConfig).map(([key, item]) => (
+              <button
+                type="button"
+                key={key}
+                className={`market-button ${market === key ? "active" : ""}`}
+                onClick={() => changeMarket(key)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </section>
+
         <section className="hero">
           <div>
             <div className="eyebrow">NEXT TRADING DAY RESEARCH</div>
-            <h2>UK equity direction signals with market context</h2>
+            <h2>Equity direction signals with market context</h2>
             <p>
               Five-model ensemble using Logistic Regression, Random Forest, XGBoost,
-              LightGBM and CatBoost with LSE price/volume, FTSE 100 context and GBP/USD.
+              LightGBM and CatBoost. {currentMarket.description}
             </p>
           </div>
           <div className="research-note">
@@ -188,6 +248,13 @@ export default function App() {
           </div>
         </section>
 
+        {market === "us" && (
+          <div className="alert">
+            <strong>US market selected.</strong> The market selector and US watchlist are ready,
+            but US company lookup and prediction are not enabled in the backend yet.
+          </div>
+        )}
+
         <section className="search-panel">
           <form
             onSubmit={(event) => {
@@ -195,7 +262,7 @@ export default function App() {
               runPrediction();
             }}
           >
-            <label htmlFor="company-search">Find a London-listed company</label>
+            <label htmlFor="company-search">{currentMarket.searchLabel}</label>
             <div className="company-search-wrap">
               <input
                 id="company-search"
@@ -204,7 +271,8 @@ export default function App() {
                   setCompanyQuery(event.target.value);
                   setSelectedCompany(null);
                 }}
-                placeholder="Search by company name or ticker, e.g. Barclays"
+                placeholder={currentMarket.placeholder}
+                disabled={market !== "uk"}
                 autoComplete="off"
               />
 
@@ -234,7 +302,7 @@ export default function App() {
             <div className="selected-company-row">
               <div>
                 <span className="selected-label">Selected</span>
-                <strong>{selectedCompany?.name || "Direct LSE ticker"}</strong>
+                <strong>{selectedCompany?.name || currentMarket.directLabel}</strong>
                 <span className="selected-symbol">{symbol}</span>
               </div>
               <input
@@ -244,16 +312,16 @@ export default function App() {
                   setSymbol(event.target.value.toUpperCase());
                   setSelectedCompany(null);
                 }}
-                placeholder="BARC.L"
+                placeholder={currentMarket.tickerPlaceholder}
               />
-              <button className="primary" disabled={!account || busy || !symbol.trim()}>
+              <button className="primary" disabled={!account || busy || !symbol.trim() || market !== "uk"}>
                 {busy ? "Analysing…" : "Run prediction"}
               </button>
             </div>
           </form>
 
           <div className="quick-symbols">
-            {quickSymbols.map((item) => (
+            {quickSymbols[market].map((item) => (
               <button
                 key={item}
                 className="ticker"
@@ -263,7 +331,7 @@ export default function App() {
                   setCompanyQuery("");
                   runPrediction(item);
                 }}
-                disabled={!account || busy}
+                disabled={!account || busy || market !== "uk"}
               >
                 {item}
               </button>
@@ -286,7 +354,7 @@ export default function App() {
         {account && !prediction && !busy && (
           <section className="empty-state">
             <h3>Ready to analyse</h3>
-            <p>Select an LSE ticker above to run the current research model.</p>
+            <p>{market === "uk" ? "Select a UK company above to run the current research model." : "US prediction support will be enabled in the next backend update."}</p>
           </section>
         )}
 
