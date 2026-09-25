@@ -58,7 +58,7 @@ def get_symbol_sector(symbol: str) -> str | None:
     """Return the provider-reported sector when available."""
     try:
         info = yf.Ticker(symbol).info or {}
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
     sector = info.get("sector")
