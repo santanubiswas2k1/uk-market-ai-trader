@@ -16,7 +16,8 @@ Azure-first research platform for multi-market equity prediction and paper tradi
 - Five-model return ensemble: Ridge, Random Forest, XGBoost, LightGBM and CatBoost
 - Expanding-window walk-forward evaluation
 - Transaction-cost-aware paper backtest
-- FastAPI service
+- FastAPI AI/prediction service
+- Separate Azure Function market-feed proxy for Twelve Data quotes
 - Microsoft Entra ID JWT validation
 - Azure Key Vault integration via DefaultAzureCredential
 - Azure Bicep starter infrastructure
@@ -96,6 +97,8 @@ The returned `close_price` is the source quotation value and therefore uses the 
 The production target is Azure Container Apps (Consumption) with scale-to-zero, ACR, Managed Identity and Key Vault. Deployment uses GitHub Actions with Azure OIDC, so no long-lived Azure client secret is stored in GitHub.
 
 See [docs/azure-serverless.md](docs/azure-serverless.md) for the one-time Azure/Entra setup and deployment flow.
+
+See [docs/market-feed.md](docs/market-feed.md) for the Twelve Data market-feed proxy and required API-key setup.
 
 ## Architecture
 
