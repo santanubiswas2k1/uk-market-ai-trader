@@ -4,7 +4,6 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.ingest.market_data import load_live_quote
 from src.markets import MARKETS
 from src.security.auth import validate_bearer_token
 from src.services.prediction import predict_symbol
@@ -73,20 +72,6 @@ def symbol_search(q: str, claims: AuthClaims, market: str = "uk", limit: int = 8
         "market": market,
         "results": [match.to_dict() for match in matches],
     }
-
-
-@app.get("/quote/{symbol}")
-def quote(symbol: str, claims: AuthClaims, market: str = "uk") -> dict:
-    """Return a provider quote snapshot for the selected symbol."""
-    try:
-        return load_live_quote(symbol)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(
-            status_code=502,
-            detail="Live quote is temporarily unavailable",
-        ) from exc
 
 
 @app.get("/predict/{symbol}")
