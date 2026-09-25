@@ -81,3 +81,19 @@ export async function getLiveQuote(symbol, market = "uk") {
   }
   return payload;
 }
+
+
+export async function getPerformance(market = "") {
+  const token = await getAccessToken();
+  const query = market ? `?market=${encodeURIComponent(market)}` : "";
+  const response = await fetch(apiUrl(`/performance${query}`), {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.detail || `Performance request failed: ${response.status}`);
+  }
+  return payload;
+}
