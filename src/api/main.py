@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.markets import MARKETS
 from src.security.auth import validate_bearer_token
 from src.services.prediction import predict_symbol
+from src.services.prediction_history import performance_summary, record_prediction
 from src.services.symbols import search_symbols
 
 app = FastAPI(title="Global Market AI Trader", version="0.6.0")
@@ -74,6 +75,15 @@ def symbol_search(q: str, claims: AuthClaims, market: str = "uk", limit: int = 8
     }
 
 
+@app.get("/performance")
+def performance(claims: AuthClaims, market: str | None = None) -> dict:
+    """Return forward-test accuracy from immutable stored predictions."""
+    try:
+        return performance_summary(market=market)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @app.get("/predict/{symbol}")
 def predict(symbol: str, claims: AuthClaims, market: str = "uk") -> dict:
     """Protected multi-market research prediction endpoint."""
@@ -81,4 +91,7 @@ def predict(symbol: str, claims: AuthClaims, market: str = "uk") -> dict:
         result = predict_symbol(symbol, market=market)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return result.to_dict()
+
+    payload = result.to_dict()
+    payload["tracking"] = record_prediction(payload)
+    return payload
