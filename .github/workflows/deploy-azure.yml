@@ -260,6 +260,22 @@ jobs:
             --content-cache-control "no-store, no-cache, must-revalidate" \
             --output none
 
+      - name: Verify market feed function discovery
+        shell: bash
+        run: |
+          az functionapp restart \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "${{ steps.infra.outputs.market_feed_function }}"
+
+          sleep 10
+
+          echo "Discovered Azure Functions:"
+          az functionapp function list \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "${{ steps.infra.outputs.market_feed_function }}" \
+            --query "[].name" \
+            -o tsv
+
       - name: Smoke test API and frontend
         shell: bash
         run: |
