@@ -118,8 +118,8 @@ resource functionPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   }
 }
 
-var functionStorageKey = listKeys(functionStorage.id, functionStorage.apiVersion).keys[0].value
-var functionStorageConnection = 'DefaultEndpointsProtocol=https;AccountName=${functionStorage.name};AccountKey=${functionStorageKey};EndpointSuffix=${environment().suffixes.storage}'
+var functionStorageKey = functionStorage.listKeys().keys[0].value
+var functionStorageConnection = 'DefaultEndpointsProtocol=https;AccountName=${functionStorage.name};AccountKey=${functionStorageKey};EndpointSuffix=${az.environment().suffixes.storage}'
 
 resource marketFeedFunction 'Microsoft.Web/sites@2023-12-01' = {
   name: '${prefix}-market-feed-${suffix}'
