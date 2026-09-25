@@ -53,6 +53,7 @@ jobs:
           ENVIRONMENT_NAME=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.environmentName.value -o tsv)
           IDENTITY_NAME=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.identityName.value -o tsv)
           KEY_VAULT_URL=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.keyVaultUrl.value -o tsv)
+          MODEL_STORAGE_URL=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.storageAccountUrl.value -o tsv)
           FRONTEND_STORAGE=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.frontendStorageName.value -o tsv)
           FRONTEND_URL=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.frontendUrl.value -o tsv)
           FRONTEND_ORIGIN="${FRONTEND_URL%/}"
@@ -62,6 +63,7 @@ jobs:
           echo "environment_name=$ENVIRONMENT_NAME" >> "$GITHUB_OUTPUT"
           echo "identity_name=$IDENTITY_NAME" >> "$GITHUB_OUTPUT"
           echo "key_vault_url=$KEY_VAULT_URL" >> "$GITHUB_OUTPUT"
+          echo "model_storage_url=$MODEL_STORAGE_URL" >> "$GITHUB_OUTPUT"
           echo "frontend_storage=$FRONTEND_STORAGE" >> "$GITHUB_OUTPUT"
           echo "frontend_url=$FRONTEND_URL" >> "$GITHUB_OUTPUT"
           echo "frontend_origin=$FRONTEND_ORIGIN" >> "$GITHUB_OUTPUT"
@@ -107,6 +109,7 @@ jobs:
               tenantId="${{ vars.AZURE_TENANT_ID }}" \
               apiAudience="${{ vars.AZURE_API_AUDIENCE }}" \
               frontendOrigin="${{ steps.infra.outputs.frontend_origin }}" \
+              modelStorageAccountUrl="${{ steps.infra.outputs.model_storage_url }}" \
               image="$IMAGE" \
             --output none
 
