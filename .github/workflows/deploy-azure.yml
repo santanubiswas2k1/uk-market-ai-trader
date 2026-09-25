@@ -41,7 +41,10 @@ jobs:
             --resource-group "$RESOURCE_GROUP" \
             --name serverless-base \
             --template-file infra/main.bicep \
-            --parameters location="$LOCATION" prefix="$PREFIX" \
+            --parameters \
+              location="$LOCATION" \
+              prefix="$PREFIX" \
+              apiAudience="$API_AUDIENCE" \
             --output none
 
       - name: Read infrastructure outputs
@@ -52,21 +55,46 @@ jobs:
           ACR_LOGIN_SERVER=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.acrLoginServer.value -o tsv)
           ENVIRONMENT_NAME=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.environmentName.value -o tsv)
           IDENTITY_NAME=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.identityName.value -o tsv)
+          KEY_VAULT_NAME=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.keyVaultName.value -o tsv)
           KEY_VAULT_URL=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.keyVaultUrl.value -o tsv)
           MODEL_STORAGE_URL=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.storageAccountUrl.value -o tsv)
           FRONTEND_STORAGE=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.frontendStorageName.value -o tsv)
           FRONTEND_URL=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.frontendUrl.value -o tsv)
+          MARKET_FEED_FUNCTION=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.marketFeedFunctionName.value -o tsv)
+          MARKET_FEED_URL=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.marketFeedUrl.value -o tsv)
           FRONTEND_ORIGIN="${FRONTEND_URL%/}"
 
           echo "acr_name=$ACR_NAME" >> "$GITHUB_OUTPUT"
           echo "acr_login_server=$ACR_LOGIN_SERVER" >> "$GITHUB_OUTPUT"
           echo "environment_name=$ENVIRONMENT_NAME" >> "$GITHUB_OUTPUT"
           echo "identity_name=$IDENTITY_NAME" >> "$GITHUB_OUTPUT"
+          echo "key_vault_name=$KEY_VAULT_NAME" >> "$GITHUB_OUTPUT"
           echo "key_vault_url=$KEY_VAULT_URL" >> "$GITHUB_OUTPUT"
           echo "model_storage_url=$MODEL_STORAGE_URL" >> "$GITHUB_OUTPUT"
           echo "frontend_storage=$FRONTEND_STORAGE" >> "$GITHUB_OUTPUT"
           echo "frontend_url=$FRONTEND_URL" >> "$GITHUB_OUTPUT"
           echo "frontend_origin=$FRONTEND_ORIGIN" >> "$GITHUB_OUTPUT"
+          echo "market_feed_function=$MARKET_FEED_FUNCTION" >> "$GITHUB_OUTPUT"
+          echo "market_feed_url=$MARKET_FEED_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Store Twelve Data API key in Key Vault
+        if: ${{ secrets.TWELVE_DATA_API_KEY != '' }}
+        env:
+          TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
+        run: |
+          az keyvault secret set \
+            --vault-name "${{ steps.infra.outputs.key_vault_name }}" \
+            --name twelve-data-api-key \
+            --value "$TWELVE_DATA_API_KEY" \
+            --output none
+
+      - name: Deploy market feed function
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ steps.infra.outputs.market_feed_function }}
+          package: market_feed
+          scm-do-build-during-deployment: true
+          enable-oryx-build: true
 
       - name: Enable static website hosting
         shell: bash
@@ -136,6 +164,7 @@ jobs:
           cat > frontend/public/config.js <<EOF
           window.__APP_CONFIG__ = {
             apiBaseUrl: "${{ steps.app.outputs.api_url }}",
+            marketFeedBaseUrl: "${{ steps.infra.outputs.market_feed_url }}",
             entraClientId: "$SPA_CLIENT_ID",
             tenantId: "${{ vars.AZURE_TENANT_ID }}",
             apiScope: "${{ vars.AZURE_API_AUDIENCE }}/access_as_user"
@@ -194,3 +223,4 @@ jobs:
 
           curl --fail --retry 8 --retry-delay 10 "${{ steps.app.outputs.api_url }}/health"
           curl --fail --retry 8 --retry-delay 5 "${{ steps.infra.outputs.frontend_url }}"
+          curl --fail -X OPTIONS "${{ steps.infra.outputs.market_feed_url }}/quote"
