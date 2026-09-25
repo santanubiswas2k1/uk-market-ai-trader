@@ -66,6 +66,22 @@ jobs:
           echo "frontend_url=$FRONTEND_URL" >> "$GITHUB_OUTPUT"
           echo "frontend_origin=$FRONTEND_ORIGIN" >> "$GITHUB_OUTPUT"
 
+      - name: Enable static website hosting
+        shell: bash
+        run: |
+          ACCOUNT_KEY=$(az storage account keys list \
+            --resource-group "$RESOURCE_GROUP" \
+            --account-name "${{ steps.infra.outputs.frontend_storage }}" \
+            --query "[0].value" -o tsv)
+
+          az storage blob service-properties update \
+            --account-name "${{ steps.infra.outputs.frontend_storage }}" \
+            --account-key "$ACCOUNT_KEY" \
+            --static-website \
+            --index-document index.html \
+            --404-document index.html \
+            --output none
+
       - name: Build container in ACR
         run: |
           az acr build \
