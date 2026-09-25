@@ -9,6 +9,7 @@ from src.features.context import (
 )
 from src.ingest.context_data import load_market_context
 from src.ingest.market_data import load_daily_history
+from src.markets import get_market, symbol_matches_market
 from src.models.ensemble import (
     EnsembleEvaluation,
     ModelMetrics,
@@ -22,6 +23,8 @@ from src.models.persistence import load_model_package, save_model_package
 
 @dataclass(frozen=True)
 class Prediction:
+    market: str
+    market_label: str
     symbol: str
     as_of: str
     close_price: float
@@ -73,30 +76,44 @@ def _deserialise_evaluation(payload: dict) -> EnsembleEvaluation:
     )
 
 
-def predict_symbol(symbol: str, period: str = "5y") -> Prediction:
-    """Return a five-model ensemble probability for the next trading day."""
+def predict_symbol(symbol: str, market: str = "uk", period: str = "5y") -> Prediction:
+    """Return a five-model ensemble probability for the selected market."""
+    market_config = get_market(market)
     symbol = symbol.upper().strip()
-    if not symbol.endswith(".L"):
-        raise ValueError("Use a London Stock Exchange symbol ending in .L, e.g. BARC.L")
+
+    if not symbol:
+        raise ValueError("Symbol is required")
+    if not symbol_matches_market(symbol, market):
+        raise ValueError(
+            f"Symbol {symbol} does not match selected market {market_config.label}"
+        )
 
     stock = load_daily_history(symbol, period=period)
-    context = load_market_context(period=period)
+    context = load_market_context(market=market, period=period)
 
     labelled = build_enriched_features(stock, context)
     live_features = build_enriched_feature_frame(stock, context)
-    latest = live_features.iloc[[-1]]
+    if labelled.empty or live_features.empty:
+        raise ValueError(
+            f"Not enough aligned price/context data for {symbol} in {market_config.label}"
+        )
 
+    latest = live_features.iloc[[-1]]
     training_index = labelled.index[-1]
     training_signature = (
-        training_index.isoformat() if hasattr(training_index, "isoformat") else str(training_index)
+        training_index.isoformat()
+        if hasattr(training_index, "isoformat")
+        else str(training_index)
     )
 
     weights = dict(DEFAULT_MODEL_WEIGHTS)
-    package = load_model_package(symbol)
+    cache_key = f"{market}/{symbol}"
+    package = load_model_package(cache_key)
     model_source = "trained"
 
     if (
         package
+        and package.get("market") == market
         and package.get("training_signature") == training_signature
         and package.get("feature_columns") == ENRICHED_FEATURE_COLUMNS
     ):
@@ -117,8 +134,9 @@ def predict_symbol(symbol: str, period: str = "5y") -> Prediction:
         models = train_final_ensemble(labelled, ENRICHED_FEATURE_COLUMNS)
 
         save_model_package(
-            symbol,
+            cache_key,
             {
+                "market": market,
                 "training_signature": training_signature,
                 "feature_columns": ENRICHED_FEATURE_COLUMNS,
                 "weights": weights,
@@ -146,6 +164,8 @@ def predict_symbol(symbol: str, period: str = "5y") -> Prediction:
     as_of = last_index.isoformat() if hasattr(last_index, "isoformat") else str(last_index)
 
     return Prediction(
+        market=market,
+        market_label=market_config.label,
         symbol=symbol,
         as_of=as_of,
         close_price=float(latest["close"].iloc[0]),
