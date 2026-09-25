@@ -165,6 +165,7 @@ jobs:
           window.__APP_CONFIG__ = {
             apiBaseUrl: "${{ steps.app.outputs.api_url }}",
             marketFeedBaseUrl: "${{ steps.infra.outputs.market_feed_url }}",
+            marketFeedRefreshMs: 60000,
             entraClientId: "$SPA_CLIENT_ID",
             tenantId: "${{ vars.AZURE_TENANT_ID }}",
             apiScope: "${{ vars.AZURE_API_AUDIENCE }}/access_as_user"
