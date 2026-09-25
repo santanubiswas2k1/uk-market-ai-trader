@@ -500,6 +500,56 @@ export default function App() {
               </div>
             </section>
 
+            <section className="decision-context-panel">
+              <div className="ensemble-heading">
+                <div>
+                  <div className="eyebrow">DECISION CONTEXT</div>
+                  <h3>News, earnings and sector context</h3>
+                </div>
+                <div className="ensemble-meta">
+                  <span>Live context</span>
+                  <span>Not yet used for training</span>
+                </div>
+              </div>
+
+              <div className="context-grid">
+                <article className="metric-card">
+                  <span>Sector</span>
+                  <strong>{prediction.decision_context?.sector || "—"}</strong>
+                </article>
+                <article className="metric-card">
+                  <span>Sector proxy</span>
+                  <strong>{prediction.decision_context?.sector_proxy || "—"}</strong>
+                </article>
+                <article className="metric-card">
+                  <span>News last 24h</span>
+                  <strong>{prediction.decision_context?.news_count_24h ?? "—"}</strong>
+                </article>
+                <article className="metric-card">
+                  <span>News sentiment</span>
+                  <strong>{metric(prediction.decision_context?.news_sentiment, 2)}</strong>
+                </article>
+                <article className="metric-card">
+                  <span>Days to earnings</span>
+                  <strong>{prediction.decision_context?.days_to_earnings ?? "—"}</strong>
+                </article>
+              </div>
+
+              {(prediction.decision_context?.recent_headlines || []).length > 0 && (
+                <div className="headline-list">
+                  {(prediction.decision_context?.recent_headlines || []).map((headline) => (
+                    <div className="headline-item" key={headline}>{headline}</div>
+                  ))}
+                </div>
+              )}
+
+              <p className="context-note">
+                Historical model inputs now include market, sector, volatility, rates,
+                oil and gold context. Current headlines and upcoming earnings are shown
+                separately until a historical news archive is connected.
+              </p>
+            </section>
+
             <section className="metrics">
               <article className="metric-card">
                 <span>Walk-forward accuracy</span>
