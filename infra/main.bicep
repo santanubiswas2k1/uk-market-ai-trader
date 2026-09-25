@@ -1,5 +1,6 @@
 param location string = resourceGroup().location
 param prefix string = 'ukmai'
+param apiAudience string = ''
 
 var suffix = uniqueString(resourceGroup().id)
 var acrPullRoleDefinitionId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
@@ -161,6 +162,10 @@ resource marketFeedFunction 'Microsoft.Web/sites@2023-12-01' = {
         {
           name: 'KEY_VAULT_URL'
           value: keyVault.properties.vaultUri
+        }
+        {
+          name: 'API_AUDIENCE'
+          value: apiAudience
         }
         {
           name: 'FRONTEND_ORIGIN'
