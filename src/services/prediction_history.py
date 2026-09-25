@@ -8,7 +8,7 @@ from typing import Any
 import pandas as pd
 from azure.core.exceptions import AzureError, ResourceExistsError, ResourceNotFoundError
 from azure.identity import DefaultAzureCredential
-from azure.storage.blob import BlobServiceClient
+from azure.storage.blob import BlobServiceClient, ContentSettings
 
 from src.ingest.market_data import load_daily_history
 
@@ -115,7 +115,7 @@ def record_prediction(prediction: dict[str, Any]) -> dict[str, Any]:
         blob.upload_blob(
             json.dumps(payload, separators=(",", ":")),
             overwrite=False,
-            content_type="application/json",
+            content_settings=ContentSettings(content_type="application/json"),
         )
         return {
             "recorded": True,
@@ -154,7 +154,7 @@ def _save_record(container, record: dict[str, Any]) -> None:
         name=name,
         data=json.dumps(payload, separators=(",", ":")),
         overwrite=True,
-        content_type="application/json",
+        content_settings=ContentSettings(content_type="application/json"),
     )
 
 
@@ -286,7 +286,7 @@ def reconcile_predictions(
             _save_record(container, record)
             completed += 1
         except AzureError:
-            continue
+            pass
 
     return completed
 
