@@ -42,7 +42,10 @@ def validate_bearer_token(authorization: str = Header(...)) -> dict:
             "options": {"require": ["exp", "iat", "iss"]},
         }
         if SETTINGS.api_audience:
-            kwargs["audience"] = SETTINGS.api_audience
+            audiences = [SETTINGS.api_audience]
+            if SETTINGS.api_audience.startswith("api://"):
+                audiences.append(SETTINGS.api_audience.removeprefix("api://"))
+            kwargs["audience"] = audiences
         else:
             kwargs["options"]["verify_aud"] = False
 
