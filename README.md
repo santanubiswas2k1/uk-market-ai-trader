@@ -5,10 +5,14 @@ Azure-first research platform for UK equity market prediction and paper trading.
 ## Current MVP
 
 - LSE/FTSE research universe
-- Daily market-data ingestion
+- Daily UK equity market-data ingestion
+- FTSE 100 context features
+- GBP/USD context features
 - Technical feature engineering
+- Normalized RNS event feature pipeline
+- Generic UK macro-series normalization for Bank Rate/CPI-style data
 - XGBoost baseline classifier
-- Chronological holdout evaluation
+- Expanding-window walk-forward evaluation
 - Transaction-cost-aware paper backtest
 - FastAPI service
 - Microsoft Entra ID JWT validation
@@ -16,11 +20,19 @@ Azure-first research platform for UK equity market prediction and paper trading.
 - Azure Bicep starter infrastructure
 - GitHub Actions CI
 
-## Architecture
+## Model inputs
 
-Market/news feeds -> Azure ingestion/storage -> feature pipeline -> model training -> prediction API -> paper trading.
+The default runnable predictor currently uses:
 
-See [docs/architecture.md](docs/architecture.md) and [docs/roadmap.md](docs/roadmap.md).
+- individual LSE share price/volume
+- 1-day and 5-day share returns
+- rolling volatility and moving-average gap
+- volume z-score
+- FTSE 100 1-day and 5-day returns
+- GBP/USD 1-day and 5-day returns
+- share return relative to the FTSE 100
+
+The repository also includes normalized feature adapters for **RNS announcements** and **UK macro series**. These are intentionally data-provider-neutral: production use should ingest data from an appropriately licensed/official source and pass it into the normalization layer rather than scrape websites.
 
 ## Local setup
 
@@ -47,15 +59,29 @@ uvicorn src.api.main:app --reload
 
 - `GET /health` is public.
 - `GET /me` validates a Microsoft Entra ID bearer token.
-- `GET /predict/{symbol}` is protected and returns the research model's next-day direction probability.
+- `GET /predict/{symbol}` is protected and returns the next-day research probability.
 
 Example symbols: `BARC.L`, `LLOY.L`, `SHEL.L`, `AZN.L`.
 
 ## Prediction interpretation
 
-The MVP returns `probability_up`, `probability_down`, a simple `UP / NEUTRAL / DOWN` research signal, and chronological holdout metrics.
+The output contains:
 
-The returned `close_price` is the source quotation value. Many London-listed equities are quoted in **GBp (pence)** rather than GBP, so consumers should not assume the numeric price is pounds without checking the instrument's quote currency.
+- `probability_up`
+- `probability_down`
+- `UP / NEUTRAL / DOWN` research signal
+- walk-forward accuracy
+- walk-forward Brier score
+- number of walk-forward folds
+- model feature count
+
+The walk-forward test repeatedly trains only on historical observations occurring before each test window. This is substantially more realistic than randomly shuffling financial time-series data.
+
+The returned `close_price` is the source quotation value. Many London-listed equities are quoted in **GBp (pence)** rather than GBP.
+
+## Architecture
+
+See [docs/architecture.md](docs/architecture.md) and [docs/roadmap.md](docs/roadmap.md).
 
 ## Security
 
@@ -63,6 +89,6 @@ Do not commit API keys, broker credentials, database passwords, or other secrets
 
 ## Important
 
-This repository is for research and paper trading. The current free/delayed source is suitable for prototyping, not necessarily production or live trading. Model probabilities are not guaranteed to be calibrated and are not financial advice.
+This repository is for research and paper trading. The current free/delayed price source is suitable for prototyping, not necessarily production or live trading. Model probabilities are not guaranteed to be calibrated and are not financial advice.
 
-Before live use, validate market-data licensing, slippage, spread, transaction costs, survivorship bias, look-ahead bias, corporate actions, probability calibration, walk-forward performance, and operational controls.
+Before live use, validate data licensing, spread/slippage, transaction costs, corporate actions, survivorship bias, look-ahead bias, release-time alignment for macro/RNS data, probability calibration, walk-forward stability, and operational controls.
