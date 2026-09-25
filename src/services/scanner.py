@@ -281,7 +281,7 @@ def _score_candidate(
         news_count_24h=news_count,
         news_sentiment=round(news_sentiment, 3),
         earnings_within_7d=earnings_within_7d,
-        reasons=tuple(reasons[:4]),
+        reasons=tuple(reasons),
     )
 
 
