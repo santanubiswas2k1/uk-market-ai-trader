@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import pandas as pd
@@ -32,7 +32,7 @@ def _headline(item: dict[str, Any]) -> str:
 def _published_at(item: dict[str, Any]) -> datetime | None:
     raw = item.get("providerPublishTime")
     if isinstance(raw, (int, float)):
-        return datetime.fromtimestamp(raw, tz=timezone.utc)
+        return datetime.fromtimestamp(raw, tz=UTC)
 
     content = item.get("content")
     if isinstance(content, dict):
@@ -41,7 +41,7 @@ def _published_at(item: dict[str, Any]) -> datetime | None:
         try:
             stamp = pd.to_datetime(raw, utc=True)
             return stamp.to_pydatetime()
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
     return None
 
@@ -59,7 +59,7 @@ def _sentiment_score(title: str) -> int:
 def _next_earnings_date(ticker: yf.Ticker) -> datetime | None:
     try:
         calendar = ticker.calendar
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
     values: list[Any] = []
@@ -70,7 +70,7 @@ def _next_earnings_date(ticker: yf.Ticker) -> datetime | None:
         raw = calendar.loc["Earnings Date"]
         values = list(raw) if hasattr(raw, "__iter__") and not isinstance(raw, str) else [raw]
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     dates: list[datetime] = []
     for value in values:
         if value is None:
@@ -79,7 +79,7 @@ def _next_earnings_date(ticker: yf.Ticker) -> datetime | None:
             parsed = pd.to_datetime(value, utc=True).to_pydatetime()
             if parsed >= now:
                 dates.append(parsed)
-        except Exception:
+        except Exception:  # noqa: BLE001, S112
             continue
     return min(dates) if dates else None
 
@@ -89,10 +89,10 @@ def load_live_decision_context(symbol: str) -> dict[str, Any]:
     ticker = yf.Ticker(symbol)
     try:
         raw_news = ticker.news or []
-    except Exception:
+    except Exception:  # noqa: BLE001
         raw_news = []
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     scored: list[tuple[str, int, datetime | None]] = []
     for item in raw_news[:20]:
         if not isinstance(item, dict):
