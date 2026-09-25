@@ -11,7 +11,7 @@ Azure-first research platform for UK equity market prediction and paper trading.
 - Technical feature engineering
 - Normalized RNS event feature pipeline
 - Generic UK macro-series normalization for Bank Rate/CPI-style data
-- XGBoost baseline classifier
+- Five-model ensemble: Logistic Regression, Random Forest, XGBoost, LightGBM and CatBoost
 - Expanding-window walk-forward evaluation
 - Transaction-cost-aware paper backtest
 - FastAPI service
@@ -22,7 +22,7 @@ Azure-first research platform for UK equity market prediction and paper trading.
 
 ## Model inputs
 
-The default runnable predictor currently uses:
+The default runnable predictor uses a five-model equal-weight ensemble over:
 
 - individual LSE share price/volume
 - 1-day and 5-day share returns
@@ -67,8 +67,10 @@ Example symbols: `BARC.L`, `LLOY.L`, `SHEL.L`, `AZN.L`.
 
 The output contains:
 
-- `probability_up`
-- `probability_down`
+- `probability_up` and `probability_down` for the ensemble
+- individual probability from each of the five models
+- per-model walk-forward accuracy and Brier score
+- model weights and cache/training source
 - `UP / NEUTRAL / DOWN` research signal
 - walk-forward accuracy
 - walk-forward Brier score
