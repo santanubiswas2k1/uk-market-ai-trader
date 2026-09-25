@@ -13,7 +13,12 @@ FEATURE_COLUMNS = [
 ]
 
 
-def build_features(df: pd.DataFrame) -> pd.DataFrame:
+def build_feature_frame(df: pd.DataFrame) -> pd.DataFrame:
+    """Build model features without creating a label.
+
+    Keeping feature construction separate from label construction prevents the
+    newest observation from being accidentally assigned a false target.
+    """
     out = df.copy().sort_index()
 
     out["ret_1d"] = out["close"].pct_change()
@@ -27,6 +32,15 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     vol_std = out["volume"].rolling(20).std()
     out["volume_z_20d"] = (out["volume"] - vol_mean) / vol_std
 
-    out["target_up_1d"] = (out["close"].shift(-1) > out["close"]).astype(int)
+    return out.dropna(subset=FEATURE_COLUMNS)
 
-    return out.dropna(subset=FEATURE_COLUMNS + ["target_up_1d"])
+
+def build_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Build labelled rows for next-day direction training."""
+    out = build_feature_frame(df)
+    next_close = out["close"].shift(-1)
+    out["target_up_1d"] = (next_close > out["close"]).astype("Int64")
+    out.loc[next_close.isna(), "target_up_1d"] = pd.NA
+    out = out.dropna(subset=["target_up_1d"]).copy()
+    out["target_up_1d"] = out["target_up_1d"].astype(int)
+    return out
