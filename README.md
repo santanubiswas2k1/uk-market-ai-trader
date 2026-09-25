@@ -36,7 +36,7 @@ The default runnable predictor uses a five-model equal-weight ensemble over:
 - sector proxy 1-day and 5-day returns and stock-vs-sector relative return
 - VIX, US 10-year yield, oil and gold daily context
 
-The prediction response also includes live **news sentiment, recent headlines, sector metadata and upcoming earnings context**. Current news and earnings are deliberately shown as decision context rather than historical training inputs until a historical point-in-time news archive is connected.
+The prediction response includes live **news sentiment, recent headlines, sector metadata and upcoming earnings context**. Live company-news sentiment is fused into the final direction probability and expected return with a bounded weight, while nearby earnings widen the expected price range. Historical walk-forward metrics do not yet include this live news overlay; a point-in-time historical news archive is required to backtest and train that layer without leakage.
 
 The repository also includes normalized feature adapters for **RNS announcements** and **macro series**. These are intentionally data-provider-neutral: production use should ingest data from an appropriately licensed/official source and pass it into the normalization layer rather than scrape websites.
 
