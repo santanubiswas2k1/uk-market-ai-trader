@@ -609,6 +609,55 @@ export default function App() {
                   completed trading-day close is available for comparison.
                 </p>
               )}
+
+              {(performance.recent || []).length > 0 && (
+                <div className="performance-table-wrap">
+                  <table className="performance-table">
+                    <thead>
+                      <tr>
+                        <th>Symbol</th>
+                        <th>Forecast date</th>
+                        <th>UP probability</th>
+                        <th>Expected close</th>
+                        <th>Actual close</th>
+                        <th>Direction</th>
+                        <th>Range</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(performance.recent || []).map((item) => (
+                        <tr key={item.prediction_id}>
+                          <td>{item.symbol}</td>
+                          <td>{String(item.as_of || "").slice(0, 10)}</td>
+                          <td>{pct(item.probability_up)}</td>
+                          <td>{metric(item.expected_close, 2)}</td>
+                          <td>{metric(item.actual_next_close, 2)}</td>
+                          <td>
+                            <span
+                              className={
+                                item.direction_correct
+                                  ? "result-good"
+                                  : "result-bad"
+                              }
+                            >
+                              {item.direction_correct ? "Correct" : "Miss"}
+                            </span>
+                          </td>
+                          <td>
+                            <span
+                              className={
+                                item.range_hit ? "result-good" : "result-bad"
+                              }
+                            >
+                              {item.range_hit ? "Hit" : "Miss"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </>
           )}
         </section>
