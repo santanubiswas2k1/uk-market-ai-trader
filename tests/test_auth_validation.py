@@ -1,5 +1,5 @@
-from src.security.auth import REQUIRED_SCOPE, _valid_audiences, _valid_issuers
 from src.config import SETTINGS
+from src.security.auth import REQUIRED_SCOPE, _valid_audiences, _valid_issuers
 
 
 def test_required_scope_name():
