@@ -12,6 +12,11 @@ TENANT_ID=$(az account show --query tenantId -o tsv)
 echo "Using subscription: $SUBSCRIPTION_ID"
 echo "Using tenant:       $TENANT_ID"
 
+for namespace in Microsoft.App Microsoft.ContainerRegistry Microsoft.KeyVault Microsoft.ManagedIdentity Microsoft.OperationalInsights Microsoft.Storage Microsoft.Insights; do
+  echo "Registering $namespace"
+  az provider register --namespace "$namespace" --wait
+done
+
 az group create --name "$RESOURCE_GROUP" --location "$LOCATION" --output none
 
 CLIENT_ID=$(az ad app create --display-name "$APP_NAME" --query appId -o tsv)
