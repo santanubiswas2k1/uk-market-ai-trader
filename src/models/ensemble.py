@@ -4,10 +4,17 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
-from sklearn.base import ClassifierMixin
+from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.metrics import accuracy_score, brier_score_loss
 
-from src.models.factory import DEFAULT_MODEL_WEIGHTS, MODEL_NAMES, make_model
+from src.models.factory import (
+    DEFAULT_MODEL_WEIGHTS,
+    DEFAULT_RETURN_MODEL_WEIGHTS,
+    MODEL_NAMES,
+    RETURN_MODEL_NAMES,
+    make_model,
+    make_return_model,
+)
 
 
 @dataclass(frozen=True)
@@ -132,3 +139,59 @@ def walk_forward_ensemble(
         folds=folds,
         model_metrics=model_metrics,
     )
+
+
+
+def _normalise_return_weights(
+    weights: dict[str, float] | None = None,
+) -> dict[str, float]:
+    chosen = dict(weights or DEFAULT_RETURN_MODEL_WEIGHTS)
+    missing = set(RETURN_MODEL_NAMES) - set(chosen)
+    if missing:
+        raise ValueError(f"Missing return ensemble weights for: {sorted(missing)}")
+
+    total = sum(float(chosen[name]) for name in RETURN_MODEL_NAMES)
+    if total <= 0:
+        raise ValueError("Return ensemble weights must sum to a positive value")
+
+    return {
+        name: float(chosen[name]) / total
+        for name in RETURN_MODEL_NAMES
+    }
+
+
+def train_return_ensemble(
+    frame: pd.DataFrame,
+    feature_columns: list[str],
+) -> dict[str, RegressorMixin]:
+    if len(frame) < 50:
+        raise ValueError("At least 50 labelled rows are required")
+
+    models: dict[str, RegressorMixin] = {}
+    for name in RETURN_MODEL_NAMES:
+        model = make_return_model(name)
+        model.fit(frame[feature_columns], frame["target_return_1d"])
+        models[name] = model
+    return models
+
+
+def predict_return_ensemble(
+    models: dict[str, RegressorMixin],
+    latest: pd.DataFrame,
+    feature_columns: list[str],
+    weights: dict[str, float] | None = None,
+) -> tuple[dict[str, float], float]:
+    normalised = _normalise_return_weights(weights)
+    predictions: dict[str, float] = {}
+
+    for name in RETURN_MODEL_NAMES:
+        model = models[name]
+        predictions[name] = float(
+            model.predict(latest[feature_columns])[0]
+        )
+
+    combined = sum(
+        predictions[name] * normalised[name]
+        for name in RETURN_MODEL_NAMES
+    )
+    return predictions, float(combined)
