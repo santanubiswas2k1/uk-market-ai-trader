@@ -32,7 +32,7 @@ def _download_first_available(candidates: tuple[str, ...], period: str) -> pd.Se
     for symbol in candidates:
         try:
             return _download_close(symbol, period)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             errors.append(f"{symbol}: {exc}")
 
     joined = "; ".join(errors)
@@ -42,7 +42,7 @@ def _download_first_available(candidates: tuple[str, ...], period: str) -> pd.Se
 def _optional_close(symbol: str, period: str, fallback: pd.Series) -> pd.Series:
     try:
         return _download_close(symbol, period)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return fallback.copy()
 
 
