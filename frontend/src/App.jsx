@@ -4,6 +4,7 @@ import {
   getLiveQuote,
   getPerformance,
   getPrediction,
+  getScanner,
   searchSymbols,
 } from "./api";
 import { initialiseAuth, msal, signIn, signOut } from "./auth";
@@ -146,6 +147,9 @@ export default function App() {
   const [prediction, setPrediction] = useState(null);
   const [performance, setPerformance] = useState(null);
   const [performanceLoading, setPerformanceLoading] = useState(false);
+  const [scanner, setScanner] = useState(null);
+  const [scannerLoading, setScannerLoading] = useState(false);
+  const [scannerError, setScannerError] = useState("");
   const [liveQuote, setLiveQuote] = useState(null);
   const [liveEnabled, setLiveEnabled] = useState(true);
   const [liveLoading, setLiveLoading] = useState(false);
@@ -284,6 +288,25 @@ export default function App() {
     setMessage("");
   }
 
+  async function runScanner() {
+    if (!account) {
+      return;
+    }
+
+    setScannerLoading(true);
+    setScannerError("");
+
+    try {
+      const result = await getScanner(market, 10);
+      setScanner(result);
+    } catch (error) {
+      setScanner(null);
+      setScannerError(error.message);
+    } finally {
+      setScannerLoading(false);
+    }
+  }
+
   async function runPrediction(nextSymbol = symbol) {
     setBusy(true);
     setMessage("");
@@ -324,6 +347,8 @@ export default function App() {
     setMarket(nextMarket);
     setPrediction(null);
     setPerformance(null);
+    setScanner(null);
+    setScannerError("");
     setLiveQuote(null);
     setLiveError("");
     setMessage("");
@@ -530,6 +555,143 @@ export default function App() {
                   Real-time/delayed according to provider entitlement
                 </span>
               </div>
+            </>
+          )}
+        </section>
+
+        <section className="scanner-panel">
+          <div className="ensemble-heading">
+            <div>
+              <div className="eyebrow">OPPORTUNITY SCANNER</div>
+              <h3>Stocks showing unusual movement potential</h3>
+            </div>
+            <div className="scanner-actions">
+              <span className="scanner-note">
+                Movement score ≠ direction forecast
+              </span>
+              <button
+                type="button"
+                className="primary"
+                onClick={runScanner}
+                disabled={!account || scannerLoading}
+              >
+                {scannerLoading ? "Scanning…" : "Scan market"}
+              </button>
+            </div>
+          </div>
+
+          {!account && (
+            <div className="live-placeholder">
+              Sign in to scan the selected market.
+            </div>
+          )}
+
+          {account && !scanner && !scannerLoading && !scannerError && (
+            <div className="live-placeholder">
+              Scan the market to rank companies by volume, volatility, momentum,
+              breakout behaviour, news and earnings catalysts.
+            </div>
+          )}
+
+          {account && scannerLoading && (
+            <div className="live-placeholder">
+              Scanning {currentMarket.label} watchlist…
+            </div>
+          )}
+
+          {scannerError && <div className="alert error">{scannerError}</div>}
+
+          {account && scanner && (
+            <>
+              <div className="scanner-meta">
+                <span>{scanner.scanned ?? 0} symbols scanned</span>
+                <span>{scanner.universe_size ?? 0} in watch universe</span>
+                <span>Explainable rule-based movement score</span>
+              </div>
+
+              <div className="scanner-table-wrap">
+                <table className="scanner-table">
+                  <thead>
+                    <tr>
+                      <th>Rank</th>
+                      <th>Symbol</th>
+                      <th>Move score</th>
+                      <th>Activity</th>
+                      <th>1D</th>
+                      <th>5D</th>
+                      <th>Volume</th>
+                      <th>Signals</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(scanner.candidates || []).map((candidate, index) => (
+                      <tr key={candidate.symbol}>
+                        <td>{index + 1}</td>
+                        <td>
+                          <strong>{candidate.symbol}</strong>
+                        </td>
+                        <td>
+                          <div className="scanner-score">
+                            <strong>{candidate.score}</strong>
+                            <span>/100</span>
+                          </div>
+                        </td>
+                        <td>{candidate.activity}</td>
+                        <td
+                          className={
+                            candidate.return_1d >= 0 ? "result-good" : "result-bad"
+                          }
+                        >
+                          {pct(candidate.return_1d)}
+                        </td>
+                        <td
+                          className={
+                            candidate.return_5d >= 0 ? "result-good" : "result-bad"
+                          }
+                        >
+                          {pct(candidate.return_5d)}
+                        </td>
+                        <td>{metric(candidate.volume_ratio_20d, 2)}×</td>
+                        <td>
+                          <div className="scanner-reasons">
+                            {(candidate.reasons || []).map((reason) => (
+                              <span key={reason}>{reason}</span>
+                            ))}
+                          </div>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="ghost scanner-analyse"
+                            disabled={busy}
+                            onClick={() => {
+                              setSymbol(candidate.symbol);
+                              setSelectedCompany(null);
+                              setCompanyQuery("");
+                              runPrediction(candidate.symbol);
+                            }}
+                          >
+                            Analyse
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {(scanner.failed_symbols || []).length > 0 && (
+                <p className="context-note">
+                  Data was unavailable for{" "}
+                  {(scanner.failed_symbols || []).join(", ")} during this scan.
+                </p>
+              )}
+
+              <p className="context-note">
+                The scanner identifies unusual activity only. Use the AI prediction
+                below to estimate direction and next-day return for a candidate.
+              </p>
             </>
           )}
         </section>
