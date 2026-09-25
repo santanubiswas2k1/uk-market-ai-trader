@@ -32,7 +32,7 @@ const marketConfig = {
     directLabel: "Direct US ticker",
     tickerPlaceholder: "AAPL",
     description:
-      "US market support is being added with S&P 500, NASDAQ and volatility context.",
+      "Five-model ensemble using US equity prices, broad US index context and USD market context.",
   },
   india: {
     label: "India / NSE & BSE",
@@ -41,7 +41,7 @@ const marketConfig = {
     directLabel: "Direct NSE/BSE ticker",
     tickerPlaceholder: "RELIANCE.NS",
     description:
-      "India market support is planned with NIFTY 50, Sensex and INR market context.",
+      "Five-model ensemble using Indian equity prices, NIFTY/Sensex context and INR FX context.",
   },
   uae: {
     label: "UAE / DFM & ADX",
