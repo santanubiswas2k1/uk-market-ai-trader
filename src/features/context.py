@@ -82,7 +82,9 @@ def build_enriched_features(
     out = build_enriched_feature_frame(stock, market_context, rns_daily, macro_daily)
     next_close = out["close"].shift(-1)
     out["target_up_1d"] = (next_close > out["close"]).astype("Int64")
+    out["target_return_1d"] = next_close / out["close"] - 1.0
     out.loc[next_close.isna(), "target_up_1d"] = pd.NA
-    out = out.dropna(subset=["target_up_1d"]).copy()
+    out.loc[next_close.isna(), "target_return_1d"] = pd.NA
+    out = out.dropna(subset=["target_up_1d", "target_return_1d"]).copy()
     out["target_up_1d"] = out["target_up_1d"].astype(int)
     return out
