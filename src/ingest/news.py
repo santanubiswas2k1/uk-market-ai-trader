@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from functools import lru_cache
 from typing import Any
 
 import pandas as pd
@@ -85,7 +84,6 @@ def _next_earnings_date(ticker: yf.Ticker) -> datetime | None:
     return min(dates) if dates else None
 
 
-@lru_cache(maxsize=256)
 def load_live_decision_context(symbol: str) -> dict[str, Any]:
     """Return current news/earnings context. These fields are not historical model inputs."""
     ticker = yf.Ticker(symbol)
