@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from math import sqrt
 
 from src.features.context import (
     ENRICHED_FEATURE_COLUMNS,
@@ -15,7 +16,9 @@ from src.models.ensemble import (
     EnsembleEvaluation,
     ModelMetrics,
     predict_ensemble,
+    predict_return_ensemble,
     train_final_ensemble,
+    train_return_ensemble,
     walk_forward_ensemble,
 )
 from src.models.factory import DEFAULT_MODEL_WEIGHTS
@@ -42,6 +45,13 @@ class Prediction:
     walk_forward_folds: int
     labelled_rows: int
     feature_count: int
+    quote_unit: str
+    expected_return_1d: float
+    expected_close: float
+    expected_range_low: float
+    expected_range_high: float
+    expected_range_confidence: float
+    return_model_predictions: dict[str, float]
     decision_context: dict
 
     def to_dict(self) -> dict:
@@ -118,8 +128,10 @@ def predict_symbol(symbol: str, market: str = "uk", period: str = "5y") -> Predi
         and package.get("market") == market
         and package.get("training_signature") == training_signature
         and package.get("feature_columns") == ENRICHED_FEATURE_COLUMNS
+        and package.get("return_models")
     ):
         models = package["models"]
+        return_models = package["return_models"]
         weights = package.get("weights", weights)
         evaluation = _deserialise_evaluation(package["evaluation"])
         model_source = "azure_blob_cache"
@@ -134,6 +146,10 @@ def predict_symbol(symbol: str, market: str = "uk", period: str = "5y") -> Predi
             weights=weights,
         )
         models = train_final_ensemble(labelled, ENRICHED_FEATURE_COLUMNS)
+        return_models = train_return_ensemble(
+            labelled,
+            ENRICHED_FEATURE_COLUMNS,
+        )
 
         save_model_package(
             cache_key,
@@ -144,6 +160,7 @@ def predict_symbol(symbol: str, market: str = "uk", period: str = "5y") -> Predi
                 "weights": weights,
                 "evaluation": _serialise_evaluation(evaluation),
                 "models": models,
+                "return_models": return_models,
             },
         )
 
@@ -154,6 +171,26 @@ def predict_symbol(symbol: str, market: str = "uk", period: str = "5y") -> Predi
         weights=weights,
     )
     probability_down = 1.0 - probability_up
+
+    return_model_predictions, expected_return_1d = predict_return_ensemble(
+        return_models,
+        latest,
+        ENRICHED_FEATURE_COLUMNS,
+    )
+
+    close_price = float(latest["close"].iloc[0])
+    expected_close = close_price * (1.0 + expected_return_1d)
+
+    annualised_vol = float(latest["vol_10d"].iloc[0])
+    daily_vol = annualised_vol / sqrt(252.0)
+    range_z = 1.2816
+    expected_range_low = max(
+        0.0,
+        close_price * (1.0 + expected_return_1d - range_z * daily_vol),
+    )
+    expected_range_high = close_price * (
+        1.0 + expected_return_1d + range_z * daily_vol
+    )
 
     if probability_up >= 0.60:
         signal = "UP"
@@ -186,7 +223,7 @@ def predict_symbol(symbol: str, market: str = "uk", period: str = "5y") -> Predi
         market_label=market_config.label,
         symbol=symbol,
         as_of=as_of,
-        close_price=float(latest["close"].iloc[0]),
+        close_price=close_price,
         probability_up=round(probability_up, 4),
         probability_down=round(probability_down, 4),
         signal=signal,
@@ -208,5 +245,15 @@ def predict_symbol(symbol: str, market: str = "uk", period: str = "5y") -> Predi
         walk_forward_folds=evaluation.folds,
         labelled_rows=len(labelled),
         feature_count=len(ENRICHED_FEATURE_COLUMNS),
+        quote_unit=market_config.quote_unit,
+        expected_return_1d=round(expected_return_1d, 6),
+        expected_close=round(expected_close, 4),
+        expected_range_low=round(expected_range_low, 4),
+        expected_range_high=round(expected_range_high, 4),
+        expected_range_confidence=0.80,
+        return_model_predictions={
+            name: round(value, 6)
+            for name, value in return_model_predictions.items()
+        },
         decision_context=decision_context,
     )
