@@ -4,7 +4,6 @@ import pandas as pd
 
 from src.features.technical import FEATURE_COLUMNS, build_feature_frame
 
-
 MARKET_FEATURE_COLUMNS = [
     "ftse_ret_1d",
     "ftse_ret_5d",
