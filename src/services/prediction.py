@@ -11,7 +11,7 @@ from src.models.train import train_final, train_holdout
 class Prediction:
     symbol: str
     as_of: str
-    close_gbp: float
+    close_price: float
     probability_up: float
     probability_down: float
     signal: str
@@ -52,7 +52,7 @@ def predict_symbol(symbol: str, period: str = "5y") -> Prediction:
     return Prediction(
         symbol=symbol,
         as_of=as_of,
-        close_gbp=float(latest["close"].iloc[0]),
+        close_price=float(latest["close"].iloc[0]),
         probability_up=round(probability_up, 4),
         probability_down=round(probability_down, 4),
         signal=signal,
