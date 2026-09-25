@@ -45,7 +45,7 @@ MARKETS: dict[str, MarketConfig] = {
     "uae": MarketConfig(
         key="uae",
         label="UAE / DFM & ADX",
-        index_tickers=("^DFMGI", "^ADI"),
+        index_tickers=("^DFMGI", "^ADI", "UAE"),
         fx_tickers=("AED=X",),
         symbol_suffixes=(".DU", ".AE"),
         exchange_names=("DFM", "ADX", "Abu Dhabi", "Dubai"),
