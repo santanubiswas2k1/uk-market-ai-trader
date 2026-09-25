@@ -36,3 +36,20 @@ export async function getPrediction(symbol) {
   }
   return payload;
 }
+
+
+export async function searchSymbols(query) {
+  const token = await getAccessToken();
+  const response = await fetch(
+    apiUrl(`/symbols/search?q=${encodeURIComponent(query)}&limit=8`),
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.detail || `Symbol lookup failed: ${response.status}`);
+  }
+  return payload.results || [];
+}
