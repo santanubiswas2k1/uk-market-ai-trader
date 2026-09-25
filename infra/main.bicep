@@ -4,6 +4,7 @@ param prefix string = 'ukmai'
 var suffix = uniqueString(resourceGroup().id)
 var acrPullRoleDefinitionId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
 var keyVaultSecretsUserRoleDefinitionId = '4633458b-17de-408a-b874-0445c86b69e6'
+var storageBlobDataContributorRoleDefinitionId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: toLower('${prefix}st${suffix}')
@@ -102,6 +103,19 @@ resource acrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
+resource storageBlobDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storage.id, identity.id, storageBlobDataContributorRoleDefinitionId)
+  scope: storage
+  properties: {
+    principalId: identity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      storageBlobDataContributorRoleDefinitionId
+    )
+  }
+}
+
 resource keyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(keyVault.id, identity.id, keyVaultSecretsUserRoleDefinitionId)
   scope: keyVault
@@ -123,6 +137,7 @@ output identityClientId string = identity.properties.clientId
 output keyVaultName string = keyVault.name
 output keyVaultUrl string = keyVault.properties.vaultUri
 output storageAccountName string = storage.name
+output storageAccountUrl string = storage.properties.primaryEndpoints.blob
 output applicationInsightsName string = appInsights.name
 output frontendStorageName string = frontendStorage.name
 output frontendUrl string = frontendStorage.properties.primaryEndpoints.web
