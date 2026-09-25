@@ -648,3 +648,11 @@ footer {
     grid-template-columns: 1fr;
   }
 }
+
+
+.range-number {
+  margin-top: 0.35rem;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
