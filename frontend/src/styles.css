@@ -291,3 +291,51 @@ footer {
   .search-row, .summary-grid, .metrics { grid-template-columns: 1fr; }
   .account-name { display: none; }
 }
+
+
+.auth-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 1.25rem 1.4rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #31518a;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(35, 68, 130, 0.38), rgba(15, 22, 34, 0.94));
+}
+
+.auth-panel h3 {
+  margin-bottom: 0.4rem;
+  font-size: 1.35rem;
+}
+
+.auth-panel p {
+  margin-bottom: 0;
+  color: #aab8cd;
+}
+
+.auth-button {
+  min-width: 190px;
+  font-size: 0.95rem;
+}
+
+.config-diagnostics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  margin-top: 0.75rem;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 700px) {
+  .auth-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .auth-actions,
+  .auth-button {
+    width: 100%;
+  }
+}
