@@ -12,6 +12,7 @@ class MarketConfig:
     symbol_suffixes: tuple[str, ...]
     exchange_names: tuple[str, ...]
     default_symbol: str
+    quote_unit: str
 
 
 MARKETS: dict[str, MarketConfig] = {
@@ -23,6 +24,7 @@ MARKETS: dict[str, MarketConfig] = {
         symbol_suffixes=(".L",),
         exchange_names=("LSE", "London Stock Exchange"),
         default_symbol="BARC.L",
+        quote_unit="GBp / source units",
     ),
     "us": MarketConfig(
         key="us",
@@ -32,6 +34,7 @@ MARKETS: dict[str, MarketConfig] = {
         symbol_suffixes=(),
         exchange_names=("NMS", "NYQ", "NAS", "NYSE", "NASDAQ", "NasdaqGS", "NasdaqCM"),
         default_symbol="AAPL",
+        quote_unit="USD",
     ),
     "india": MarketConfig(
         key="india",
@@ -41,6 +44,7 @@ MARKETS: dict[str, MarketConfig] = {
         symbol_suffixes=(".NS", ".BO"),
         exchange_names=("NSE", "BSE"),
         default_symbol="RELIANCE.NS",
+        quote_unit="INR",
     ),
     "uae": MarketConfig(
         key="uae",
@@ -50,6 +54,7 @@ MARKETS: dict[str, MarketConfig] = {
         symbol_suffixes=(".DU", ".AE"),
         exchange_names=("DFM", "ADX", "Abu Dhabi", "Dubai"),
         default_symbol="EMAAR.DU",
+        quote_unit="AED",
     ),
     "canada": MarketConfig(
         key="canada",
@@ -59,6 +64,7 @@ MARKETS: dict[str, MarketConfig] = {
         symbol_suffixes=(".TO", ".V"),
         exchange_names=("TOR", "TSX", "TSXV", "Toronto"),
         default_symbol="RY.TO",
+        quote_unit="CAD",
     ),
     "europe": MarketConfig(
         key="europe",
@@ -68,6 +74,7 @@ MARKETS: dict[str, MarketConfig] = {
         symbol_suffixes=(".DE", ".PA", ".AS", ".MI", ".MC", ".BR", ".LS", ".VI"),
         exchange_names=("GER", "PAR", "AMS", "MIL", "MCE", "BRU", "LIS", "VIE"),
         default_symbol="SAP.DE",
+        quote_unit="EUR / local source units",
     ),
     "hong_kong": MarketConfig(
         key="hong_kong",
@@ -77,6 +84,7 @@ MARKETS: dict[str, MarketConfig] = {
         symbol_suffixes=(".HK",),
         exchange_names=("HKG", "HKSE", "Hong Kong"),
         default_symbol="0700.HK",
+        quote_unit="HKD",
     ),
     "japan": MarketConfig(
         key="japan",
@@ -86,6 +94,7 @@ MARKETS: dict[str, MarketConfig] = {
         symbol_suffixes=(".T",),
         exchange_names=("JPX", "TYO", "Tokyo"),
         default_symbol="7203.T",
+        quote_unit="JPY",
     ),
     "australia": MarketConfig(
         key="australia",
@@ -95,6 +104,7 @@ MARKETS: dict[str, MarketConfig] = {
         symbol_suffixes=(".AX",),
         exchange_names=("ASX", "Australian"),
         default_symbol="BHP.AX",
+        quote_unit="AUD",
     ),
 }
 
