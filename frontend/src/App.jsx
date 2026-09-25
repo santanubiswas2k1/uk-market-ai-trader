@@ -8,6 +8,11 @@ const quickSymbols = {
   us: ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META"],
   india: ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS"],
   uae: ["EMAAR.DU", "DEWA.DU", "FAB.AE", "ADCB.AE", "ALDAR.AE", "IHC.AE"],
+  canada: ["RY.TO", "TD.TO", "SHOP.TO", "ENB.TO", "BNS.TO", "CNR.TO"],
+  europe: ["SAP.DE", "ASML.AS", "MC.PA", "SIE.DE", "OR.PA", "AIR.PA"],
+  hong_kong: ["0700.HK", "9988.HK", "0005.HK", "1299.HK", "3690.HK", "2318.HK"],
+  japan: ["7203.T", "6758.T", "9984.T", "8306.T", "6501.T", "7974.T"],
+  australia: ["BHP.AX", "CBA.AX", "CSL.AX", "NAB.AX", "WBC.AX", "ANZ.AX"],
 };
 
 const marketConfig = {
@@ -45,7 +50,52 @@ const marketConfig = {
     directLabel: "Direct DFM/ADX ticker",
     tickerPlaceholder: "EMAAR.DU",
     description:
-      "UAE market support is planned with DFM, ADX and AED market context.",
+      "Five-model ensemble using UAE equity prices, local index context and AED FX context.",
+  },
+  canada: {
+    label: "Canada / TSX",
+    searchLabel: "Find a Canada-listed company",
+    placeholder: "Search by company name or ticker, e.g. Royal Bank",
+    directLabel: "Direct TSX ticker",
+    tickerPlaceholder: "RY.TO",
+    description:
+      "Five-model ensemble using Canadian equity prices, TSX context and CAD FX context.",
+  },
+  europe: {
+    label: "Europe / Major Exchanges",
+    searchLabel: "Find a Europe-listed company",
+    placeholder: "Search by company name or ticker, e.g. SAP",
+    directLabel: "Direct European ticker",
+    tickerPlaceholder: "SAP.DE",
+    description:
+      "Five-model ensemble using European equity prices, STOXX context and EUR FX context.",
+  },
+  hong_kong: {
+    label: "Hong Kong / HKEX",
+    searchLabel: "Find a Hong Kong-listed company",
+    placeholder: "Search by company name or ticker, e.g. Tencent",
+    directLabel: "Direct HKEX ticker",
+    tickerPlaceholder: "0700.HK",
+    description:
+      "Five-model ensemble using HKEX equity prices, Hang Seng context and HKD FX context.",
+  },
+  japan: {
+    label: "Japan / TSE",
+    searchLabel: "Find a Japan-listed company",
+    placeholder: "Search by company name or ticker, e.g. Toyota",
+    directLabel: "Direct TSE ticker",
+    tickerPlaceholder: "7203.T",
+    description:
+      "Five-model ensemble using Japanese equity prices, Nikkei context and JPY FX context.",
+  },
+  australia: {
+    label: "Australia / ASX",
+    searchLabel: "Find an Australia-listed company",
+    placeholder: "Search by company name or ticker, e.g. BHP",
+    directLabel: "Direct ASX ticker",
+    tickerPlaceholder: "BHP.AX",
+    description:
+      "Five-model ensemble using Australian equity prices, ASX 200 context and AUD FX context.",
   },
 };
 
@@ -112,11 +162,6 @@ export default function App() {
       return undefined;
     }
 
-    if (market !== "uk") {
-      setSymbolMatches([]);
-      return undefined;
-    }
-
     const query = companyQuery.trim();
     if (query.length < 2) {
       setSymbolMatches([]);
@@ -126,7 +171,7 @@ export default function App() {
     const timer = window.setTimeout(async () => {
       setSearchingSymbols(true);
       try {
-        const results = await searchSymbols(query);
+        const results = await searchSymbols(query, market);
         setSymbolMatches(results);
       } catch (error) {
         setMessage(error.message);
@@ -155,7 +200,7 @@ export default function App() {
     try {
       const normalized = nextSymbol.trim().toUpperCase();
       setSymbol(normalized);
-      const result = await getPrediction(normalized);
+      const result = await getPrediction(normalized, market);
       setPrediction(result);
     } catch (error) {
       setMessage(error.message);
@@ -170,6 +215,11 @@ export default function App() {
       us: "AAPL",
       india: "RELIANCE.NS",
       uae: "EMAAR.DU",
+      canada: "RY.TO",
+      europe: "SAP.DE",
+      hong_kong: "0700.HK",
+      japan: "7203.T",
+      australia: "BHP.AX",
     };
 
     setMarket(nextMarket);
@@ -189,7 +239,7 @@ export default function App() {
       <header className="topbar">
         <div>
           <div className="eyebrow">AZURE SERVERLESS • PAPER TRADING</div>
-          <h1>UK Market AI Trader</h1>
+          <h1>Global Market AI Trader</h1>
         </div>
         <div className="account">
           <span className={`status-dot status-${health}`} />
@@ -278,14 +328,6 @@ export default function App() {
           </div>
         </section>
 
-        {market !== "uk" && (
-          <div className="alert">
-            <strong>{currentMarket.label} selected.</strong> The market is available in the
-            selector and watchlist, but company lookup and prediction are not enabled for this
-            market in the backend yet.
-          </div>
-        )}
-
         <section className="search-panel">
           <form
             onSubmit={(event) => {
@@ -303,14 +345,13 @@ export default function App() {
                   setSelectedCompany(null);
                 }}
                 placeholder={currentMarket.placeholder}
-                disabled={market !== "uk"}
                 autoComplete="off"
               />
 
               {(searchingSymbols || symbolMatches.length > 0) && (
                 <div className="symbol-results">
                   {searchingSymbols && (
-                    <div className="symbol-result muted-result">Searching LSE companies…</div>
+                    <div className="symbol-result muted-result">Searching {currentMarket.label} companies…</div>
                   )}
                   {!searchingSymbols && symbolMatches.map((match) => (
                     <button
@@ -345,7 +386,7 @@ export default function App() {
                 }}
                 placeholder={currentMarket.tickerPlaceholder}
               />
-              <button className="primary" disabled={!account || busy || !symbol.trim() || market !== "uk"}>
+              <button className="primary" disabled={!account || busy || !symbol.trim()}>
                 {busy ? "Analysing…" : "Run prediction"}
               </button>
             </div>
@@ -362,7 +403,7 @@ export default function App() {
                   setCompanyQuery("");
                   runPrediction(item);
                 }}
-                disabled={!account || busy || market !== "uk"}
+                disabled={!account || busy}
               >
                 {item}
               </button>
@@ -385,7 +426,7 @@ export default function App() {
         {account && !prediction && !busy && (
           <section className="empty-state">
             <h3>Ready to analyse</h3>
-            <p>{market === "uk" ? "Select a UK company above to run the current research model." : `${currentMarket.label} prediction support will be enabled in a later backend update.`}</p>
+            <p>Select a company above to run the current {currentMarket.label} research model.</p>
           </section>
         )}
 
@@ -486,7 +527,7 @@ export default function App() {
       </main>
 
       <footer>
-        UK Market AI Trader • Azure Container Apps + Azure static hosting •
+        Global Market AI Trader • Azure Container Apps + Azure static hosting •
         Entra ID authentication
       </footer>
     </div>
