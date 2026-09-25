@@ -1,0 +1,110 @@
+name: Deploy Azure serverless
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "infra/**"
+      - "Dockerfile"
+      - ".dockerignore"
+      - "pyproject.toml"
+      - ".github/workflows/deploy-azure.yml"
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: azure-production
+  cancel-in-progress: false
+
+env:
+  RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP || 'rg-uk-market-ai-trader' }}
+  LOCATION: ${{ vars.AZURE_LOCATION || 'uksouth' }}
+  PREFIX: ukmai
+  APP_NAME: uk-market-ai-trader
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create resource group
+        run: az group create --name "$RESOURCE_GROUP" --location "$LOCATION" --output none
+
+      - name: Deploy serverless base
+        run: |
+          az deployment group create \
+            --resource-group "$RESOURCE_GROUP" \
+            --name serverless-base \
+            --template-file infra/main.bicep \
+            --parameters location="$LOCATION" prefix="$PREFIX" \
+            --output none
+
+      - name: Read infrastructure outputs
+        id: infra
+        shell: bash
+        run: |
+          ACR_NAME=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.acrName.value -o tsv)
+          ACR_LOGIN_SERVER=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.acrLoginServer.value -o tsv)
+          ENVIRONMENT_NAME=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.environmentName.value -o tsv)
+          IDENTITY_NAME=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.identityName.value -o tsv)
+          KEY_VAULT_URL=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.keyVaultUrl.value -o tsv)
+
+          echo "acr_name=$ACR_NAME" >> "$GITHUB_OUTPUT"
+          echo "acr_login_server=$ACR_LOGIN_SERVER" >> "$GITHUB_OUTPUT"
+          echo "environment_name=$ENVIRONMENT_NAME" >> "$GITHUB_OUTPUT"
+          echo "identity_name=$IDENTITY_NAME" >> "$GITHUB_OUTPUT"
+          echo "key_vault_url=$KEY_VAULT_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Build container in ACR
+        run: |
+          az acr build \
+            --registry "${{ steps.infra.outputs.acr_name }}" \
+            --image "uk-market-ai-trader:${GITHUB_SHA}" \
+            .
+
+      - name: Deploy Container App
+        run: |
+          IMAGE="${{ steps.infra.outputs.acr_login_server }}/uk-market-ai-trader:${GITHUB_SHA}"
+
+          az deployment group create \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "app-${GITHUB_RUN_ID}" \
+            --template-file infra/app.bicep \
+            --parameters \
+              location="$LOCATION" \
+              appName="$APP_NAME" \
+              environmentName="${{ steps.infra.outputs.environment_name }}" \
+              acrName="${{ steps.infra.outputs.acr_name }}" \
+              identityName="${{ steps.infra.outputs.identity_name }}" \
+              keyVaultUrl="${{ steps.infra.outputs.key_vault_url }}" \
+              tenantId="${{ vars.AZURE_TENANT_ID }}" \
+              apiAudience="${{ vars.AZURE_API_AUDIENCE }}" \
+              image="$IMAGE" \
+            --output none
+
+      - name: Smoke test
+        shell: bash
+        run: |
+          APP_URL=$(az containerapp show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$APP_NAME" \
+            --query "properties.configuration.ingress.fqdn" \
+            -o tsv)
+
+          echo "Application URL: https://$APP_URL"
+          curl --fail --retry 8 --retry-delay 10 "https://$APP_URL/health"
