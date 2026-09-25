@@ -426,3 +426,93 @@ footer {
     grid-template-columns: 1fr;
   }
 }
+
+
+.company-search-wrap {
+  position: relative;
+}
+
+.symbol-results {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  border: 1px solid #2b3950;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0b121e;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+}
+
+.symbol-result {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  border: 0;
+  border-bottom: 1px solid #202b3d;
+  background: #0b121e;
+  color: #e7eef9;
+  text-align: left;
+}
+
+.symbol-result:last-child {
+  border-bottom: 0;
+}
+
+.symbol-result:hover {
+  background: #121c2b;
+}
+
+.symbol-result span {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.symbol-result small {
+  color: #7f91aa;
+}
+
+.symbol-result b {
+  color: #8fb3ff;
+  white-space: nowrap;
+}
+
+.muted-result {
+  color: #8292a8;
+  cursor: default;
+}
+
+.selected-company-row {
+  display: grid;
+  grid-template-columns: 1fr minmax(130px, 180px) auto;
+  gap: 0.75rem;
+  align-items: end;
+  margin-top: 0.9rem;
+}
+
+.selected-company-row > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.selected-label {
+  color: #71829a;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.selected-symbol {
+  color: #8fb3ff;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 700px) {
+  .selected-company-row {
+    grid-template-columns: 1fr;
+  }
+}
