@@ -32,8 +32,12 @@ The default runnable predictor uses a five-model equal-weight ensemble over:
 - selected market index 1-day and 5-day returns
 - selected market FX/proxy 1-day and 5-day returns
 - share return relative to the selected market index
+- sector proxy 1-day and 5-day returns and stock-vs-sector relative return
+- VIX, US 10-year yield, oil and gold daily context
 
-The repository also includes normalized feature adapters for **RNS announcements** and **UK macro series**. These are intentionally data-provider-neutral: production use should ingest data from an appropriately licensed/official source and pass it into the normalization layer rather than scrape websites.
+The prediction response also includes live **news sentiment, recent headlines, sector metadata and upcoming earnings context**. Current news and earnings are deliberately shown as decision context rather than historical training inputs until a historical point-in-time news archive is connected.
+
+The repository also includes normalized feature adapters for **RNS announcements** and **macro series**. These are intentionally data-provider-neutral: production use should ingest data from an appropriately licensed/official source and pass it into the normalization layer rather than scrape websites.
 
 ## Local setup
 
