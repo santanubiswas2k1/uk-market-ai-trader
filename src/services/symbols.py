@@ -32,7 +32,7 @@ def _is_market_match(symbol: str, exchange: str, market: str) -> bool:
     )
 
     if market == "us":
-        return "." not in normalized_symbol and exchange_match
+        return exchange_match
 
     return suffix_match or exchange_match
 
