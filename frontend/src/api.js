@@ -5,6 +5,10 @@ function apiUrl(path) {
   return `${config.apiBaseUrl.replace(/\/$/, "")}${path}`;
 }
 
+function marketFeedUrl(path) {
+  return `${config.marketFeedBaseUrl.replace(/\/$/, "")}${path}`;
+}
+
 export async function getHealth() {
   const response = await fetch(apiUrl("/health"));
   if (!response.ok) {
@@ -56,10 +60,14 @@ export async function searchSymbols(query, market = "uk") {
 
 
 export async function getLiveQuote(symbol, market = "uk") {
+  if (!config.marketFeedBaseUrl) {
+    throw new Error("Market feed URL is not configured");
+  }
+
   const token = await getAccessToken();
   const response = await fetch(
-    apiUrl(
-      `/quote/${encodeURIComponent(symbol)}?market=${encodeURIComponent(market)}`,
+    marketFeedUrl(
+      `/quote?symbol=${encodeURIComponent(symbol)}&market=${encodeURIComponent(market)}`,
     ),
     {
       headers: { Authorization: `Bearer ${token}` },
