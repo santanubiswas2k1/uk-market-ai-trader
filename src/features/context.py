@@ -10,6 +10,13 @@ MARKET_FEATURE_COLUMNS = [
     "fx_ret_1d",
     "fx_ret_5d",
     "market_rel_1d",
+    "sector_ret_1d",
+    "sector_ret_5d",
+    "sector_rel_1d",
+    "vix_ret_1d",
+    "us10y_ret_1d",
+    "oil_ret_1d",
+    "gold_ret_1d",
 ]
 
 ENRICHED_FEATURE_COLUMNS = FEATURE_COLUMNS + MARKET_FEATURE_COLUMNS
@@ -21,7 +28,7 @@ def build_enriched_feature_frame(
     rns_daily: pd.DataFrame | None = None,
     macro_daily: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    """Join stock, market-index, FX and optional event features without look-ahead."""
+    """Join technical, market, sector and risk features without look-ahead."""
     out = build_feature_frame(stock).copy()
 
     context = market_context.copy().sort_index()
@@ -29,9 +36,28 @@ def build_enriched_feature_frame(
     context["market_ret_5d"] = context["market_close"].pct_change(5)
     context["fx_ret_1d"] = context["fx_close"].pct_change()
     context["fx_ret_5d"] = context["fx_close"].pct_change(5)
+    context["sector_ret_1d"] = context["sector_close"].pct_change()
+    context["sector_ret_5d"] = context["sector_close"].pct_change(5)
+    context["vix_ret_1d"] = context["vix_close"].pct_change()
+    context["us10y_ret_1d"] = context["us10y_close"].pct_change()
+    context["oil_ret_1d"] = context["oil_close"].pct_change()
+    context["gold_ret_1d"] = context["gold_close"].pct_change()
 
-    out = out.join(context[MARKET_FEATURE_COLUMNS[:-1]], how="left")
+    join_columns = [
+        "market_ret_1d",
+        "market_ret_5d",
+        "fx_ret_1d",
+        "fx_ret_5d",
+        "sector_ret_1d",
+        "sector_ret_5d",
+        "vix_ret_1d",
+        "us10y_ret_1d",
+        "oil_ret_1d",
+        "gold_ret_1d",
+    ]
+    out = out.join(context[join_columns], how="left")
     out["market_rel_1d"] = out["ret_1d"] - out["market_ret_1d"]
+    out["sector_rel_1d"] = out["ret_1d"] - out["sector_ret_1d"]
 
     if rns_daily is not None:
         rns = rns_daily.copy().sort_index()
