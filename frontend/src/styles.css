@@ -656,3 +656,164 @@ footer {
   font-weight: 800;
   letter-spacing: -0.02em;
 }
+
+
+.live-market-panel {
+  margin-bottom: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid #2b3c58;
+  border-radius: 16px;
+  background:
+    linear-gradient(145deg, rgba(17, 30, 50, 0.96), rgba(10, 16, 27, 0.96));
+}
+
+.live-market-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.live-market-heading h3 {
+  margin-bottom: 0;
+  font-size: 1.4rem;
+}
+
+.live-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.feed-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #314057;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.feed-on {
+  color: #72dfa3;
+  background: rgba(28, 105, 67, 0.2);
+  border-color: rgba(67, 178, 118, 0.45);
+}
+
+.feed-off {
+  color: #a3afc0;
+  background: rgba(83, 94, 111, 0.16);
+}
+
+.live-placeholder {
+  padding: 1.4rem 0;
+  color: #8393aa;
+  text-align: center;
+}
+
+.live-quote-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.5fr) repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+.live-price-card,
+.live-stat {
+  border: 1px solid #293850;
+  border-radius: 12px;
+  background: rgba(8, 14, 24, 0.82);
+  padding: 1rem;
+}
+
+.live-price-card {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.live-price-card strong {
+  font-size: 2.25rem;
+  line-height: 1;
+}
+
+.live-label,
+.live-stat span {
+  color: #8798b0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.live-stat {
+  display: grid;
+  gap: 0.55rem;
+  align-content: center;
+}
+
+.live-stat strong {
+  color: #f0f5fc;
+  font-size: 1.1rem;
+}
+
+.live-change {
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.live-change.positive {
+  color: #69d99a;
+}
+
+.live-change.negative {
+  color: #f17c85;
+}
+
+.live-feed-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.8rem;
+  margin-top: 0.8rem;
+  color: #7e8ea5;
+  font-size: 0.72rem;
+}
+
+.live-feed-meta span {
+  border-right: 1px solid #28354a;
+  padding-right: 0.8rem;
+}
+
+.live-feed-meta span:last-child {
+  border-right: 0;
+  padding-right: 0;
+}
+
+@media (max-width: 980px) {
+  .live-quote-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .live-price-card {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 620px) {
+  .live-market-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .live-controls {
+    width: 100%;
+  }
+
+  .live-quote-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .live-price-card {
+    grid-column: auto;
+  }
+}
