@@ -28,3 +28,6 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
+
+[project.scripts]
+uk-market-predict = "src.cli:main"
