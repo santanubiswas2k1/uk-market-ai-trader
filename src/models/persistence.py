@@ -5,9 +5,9 @@ import os
 from typing import Any
 
 import joblib
+from azure.core.exceptions import AzureError, ResourceExistsError, ResourceNotFoundError
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
-from azure.core.exceptions import AzureError, ResourceExistsError, ResourceNotFoundError
 
 CONTAINER_NAME = "models"
 
@@ -34,10 +34,9 @@ def load_model_package(symbol: str) -> dict[str, Any] | None:
     )
     try:
         payload = blob.download_blob().readall()
-    except (ResourceNotFoundError, AzureError):
+        return joblib.load(io.BytesIO(payload))
+    except (AzureError, EOFError, ResourceNotFoundError, ValueError):
         return None
-
-    return joblib.load(io.BytesIO(payload))
 
 
 def save_model_package(symbol: str, package: dict[str, Any]) -> bool:
