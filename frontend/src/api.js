@@ -53,3 +53,23 @@ export async function searchSymbols(query, market = "uk") {
   }
   return payload.results || [];
 }
+
+
+export async function getLiveQuote(symbol, market = "uk") {
+  const token = await getAccessToken();
+  const response = await fetch(
+    apiUrl(
+      `/quote/${encodeURIComponent(symbol)}?market=${encodeURIComponent(market)}`,
+    ),
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    },
+  );
+
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.detail || `Live quote failed: ${response.status}`);
+  }
+  return payload;
+}
