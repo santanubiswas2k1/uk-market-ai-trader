@@ -29,10 +29,33 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -e .[dev]
 pytest
+```
+
+Run a research prediction:
+
+```bash
+uk-market-predict BARC.L
+# or
+python -m src.cli BARC.L
+```
+
+Run the API:
+
+```bash
 uvicorn src.api.main:app --reload
 ```
 
-The API health endpoint is available at `/health`. The `/me` endpoint is protected by Entra ID bearer-token validation.
+- `GET /health` is public.
+- `GET /me` validates a Microsoft Entra ID bearer token.
+- `GET /predict/{symbol}` is protected and returns the research model's next-day direction probability.
+
+Example symbols: `BARC.L`, `LLOY.L`, `SHEL.L`, `AZN.L`.
+
+## Prediction interpretation
+
+The MVP returns `probability_up`, `probability_down`, a simple `UP / NEUTRAL / DOWN` research signal, and chronological holdout metrics.
+
+The returned `close_price` is the source quotation value. Many London-listed equities are quoted in **GBp (pence)** rather than GBP, so consumers should not assume the numeric price is pounds without checking the instrument's quote currency.
 
 ## Security
 
@@ -40,4 +63,6 @@ Do not commit API keys, broker credentials, database passwords, or other secrets
 
 ## Important
 
-This repository is for research and paper trading. Free/delayed data sources are suitable for prototyping, not necessarily for production or live trading. Before live use, validate licensing, slippage, spread, transaction costs, survivorship bias, look-ahead bias, corporate actions, calibration, and operational controls.
+This repository is for research and paper trading. The current free/delayed source is suitable for prototyping, not necessarily production or live trading. Model probabilities are not guaranteed to be calibrated and are not financial advice.
+
+Before live use, validate market-data licensing, slippage, spread, transaction costs, survivorship bias, look-ahead bias, corporate actions, probability calibration, walk-forward performance, and operational controls.
