@@ -5,10 +5,10 @@ import pandas as pd
 from src.features.technical import FEATURE_COLUMNS, build_feature_frame
 
 MARKET_FEATURE_COLUMNS = [
-    "ftse_ret_1d",
-    "ftse_ret_5d",
-    "gbpusd_ret_1d",
-    "gbpusd_ret_5d",
+    "market_ret_1d",
+    "market_ret_5d",
+    "fx_ret_1d",
+    "fx_ret_5d",
     "market_rel_1d",
 ]
 
@@ -21,17 +21,17 @@ def build_enriched_feature_frame(
     rns_daily: pd.DataFrame | None = None,
     macro_daily: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    """Join stock, FTSE, FX and optional RNS/macro features without look-ahead."""
+    """Join stock, market-index, FX and optional event features without look-ahead."""
     out = build_feature_frame(stock).copy()
 
     context = market_context.copy().sort_index()
-    context["ftse_ret_1d"] = context["ftse_close"].pct_change()
-    context["ftse_ret_5d"] = context["ftse_close"].pct_change(5)
-    context["gbpusd_ret_1d"] = context["gbpusd_close"].pct_change()
-    context["gbpusd_ret_5d"] = context["gbpusd_close"].pct_change(5)
+    context["market_ret_1d"] = context["market_close"].pct_change()
+    context["market_ret_5d"] = context["market_close"].pct_change(5)
+    context["fx_ret_1d"] = context["fx_close"].pct_change()
+    context["fx_ret_5d"] = context["fx_close"].pct_change(5)
 
     out = out.join(context[MARKET_FEATURE_COLUMNS[:-1]], how="left")
-    out["market_rel_1d"] = out["ret_1d"] - out["ftse_ret_1d"]
+    out["market_rel_1d"] = out["ret_1d"] - out["market_ret_1d"]
 
     if rns_daily is not None:
         rns = rns_daily.copy().sort_index()
