@@ -128,3 +128,56 @@ def load_live_decision_context(symbol: str) -> dict[str, Any]:
         "news_used_in_model": False,
         "earnings_used_in_model": False,
     }
+
+
+NEWS_MAX_WEIGHT = 0.12
+
+
+def fuse_news_sentiment(
+    base_probability_up: float,
+    base_expected_return: float,
+    daily_vol: float,
+    context: dict[str, Any],
+) -> dict[str, float | bool]:
+    """Blend current news sentiment into the live forecast with a bounded weight.
+
+    This live overlay is intentionally separate from historical walk-forward metrics
+    until point-in-time historical news data is available for proper backtesting.
+    """
+    count = max(0, int(context.get("news_count_24h") or 0))
+    sentiment = float(context.get("news_sentiment") or 0.0)
+    sentiment = max(-1.0, min(1.0, sentiment))
+
+    coverage = min(count / 5.0, 1.0)
+    news_weight = NEWS_MAX_WEIGHT * coverage
+    news_probability_up = 0.5 + 0.5 * sentiment
+
+    adjusted_probability_up = (
+        (1.0 - news_weight) * base_probability_up
+        + news_weight * news_probability_up
+    )
+    adjusted_probability_up = max(0.01, min(0.99, adjusted_probability_up))
+
+    return_tilt = news_weight * sentiment * max(0.0, daily_vol)
+    adjusted_expected_return = base_expected_return + return_tilt
+
+    days_to_earnings = context.get("days_to_earnings")
+    earnings_range_multiplier = 1.0
+    if isinstance(days_to_earnings, int):
+        if days_to_earnings <= 1:
+            earnings_range_multiplier = 1.50
+        elif days_to_earnings <= 3:
+            earnings_range_multiplier = 1.35
+        elif days_to_earnings <= 7:
+            earnings_range_multiplier = 1.20
+
+    return {
+        "news_used_in_algorithm": news_weight > 0.0,
+        "news_weight": news_weight,
+        "news_probability_up": news_probability_up,
+        "adjusted_probability_up": adjusted_probability_up,
+        "return_tilt": return_tilt,
+        "adjusted_expected_return": adjusted_expected_return,
+        "earnings_range_multiplier": earnings_range_multiplier,
+        "news_overlay_backtested": False,
+    }
