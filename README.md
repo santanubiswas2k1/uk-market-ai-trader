@@ -12,7 +12,8 @@ Azure-first research platform for multi-market equity prediction and paper tradi
 - Technical feature engineering
 - Normalized RNS event feature pipeline
 - Generic UK macro-series normalization for Bank Rate/CPI-style data
-- Five-model ensemble: Logistic Regression, Random Forest, XGBoost, LightGBM and CatBoost
+- Five-model direction ensemble: Logistic Regression, Random Forest, XGBoost, LightGBM and CatBoost
+- Five-model return ensemble: Ridge, Random Forest, XGBoost, LightGBM and CatBoost
 - Expanding-window walk-forward evaluation
 - Transaction-cost-aware paper backtest
 - FastAPI service
@@ -73,7 +74,10 @@ Example symbols: `BARC.L`, `AAPL`, `RELIANCE.NS`, `RY.TO`, `SAP.DE`, `0700.HK`, 
 
 The output contains:
 
-- `probability_up` and `probability_down` for the ensemble
+- `probability_up` and `probability_down` for the direction ensemble
+- `expected_return_1d` from a five-model return regression ensemble
+- `expected_close` derived from the latest close and expected return
+- `expected_range_low` / `expected_range_high` as an 80% volatility-based next-day range
 - individual probability from each of the five models
 - per-model walk-forward accuracy and Brier score
 - model weights and cache/training source
