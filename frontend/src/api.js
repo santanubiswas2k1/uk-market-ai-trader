@@ -24,9 +24,9 @@ export async function getMe() {
   return response.json();
 }
 
-export async function getPrediction(symbol) {
+export async function getPrediction(symbol, market = "uk") {
   const token = await getAccessToken();
-  const response = await fetch(apiUrl(`/predict/${encodeURIComponent(symbol)}`), {
+  const response = await fetch(apiUrl(`/predict/${encodeURIComponent(symbol)}?market=${encodeURIComponent(market)}`), {
     headers: { Authorization: `Bearer ${token}` },
   });
 
@@ -38,10 +38,10 @@ export async function getPrediction(symbol) {
 }
 
 
-export async function searchSymbols(query) {
+export async function searchSymbols(query, market = "uk") {
   const token = await getAccessToken();
   const response = await fetch(
-    apiUrl(`/symbols/search?q=${encodeURIComponent(query)}&limit=8`),
+    apiUrl(`/symbols/search?q=${encodeURIComponent(query)}&market=${encodeURIComponent(market)}&limit=8`),
     {
       headers: { Authorization: `Bearer ${token}` },
     },
