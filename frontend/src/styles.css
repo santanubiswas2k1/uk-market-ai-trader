@@ -565,3 +565,36 @@ footer {
     flex-direction: column;
   }
 }
+
+
+.market-dropdown-wrap {
+  display: grid;
+  gap: 0.35rem;
+  min-width: min(320px, 100%);
+}
+
+.market-dropdown-wrap label {
+  color: #8ea0b8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.market-select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #34445d;
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  background: #101827;
+  color: #eef4ff;
+  font: inherit;
+  font-weight: 700;
+  outline: none;
+}
+
+.market-select:focus {
+  border-color: #5b8bfa;
+  box-shadow: 0 0 0 3px rgba(71, 124, 244, 0.14);
+}
