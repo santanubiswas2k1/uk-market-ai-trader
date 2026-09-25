@@ -198,7 +198,10 @@ export default function App() {
     }
 
     refreshLiveQuote();
-    const timer = window.setInterval(refreshLiveQuote, 20000);
+    const timer = window.setInterval(
+      refreshLiveQuote,
+      config.marketFeedRefreshMs,
+    );
 
     return () => {
       cancelled = true;
@@ -389,7 +392,9 @@ export default function App() {
             </div>
             <div className="live-controls">
               <span className={`feed-badge ${liveEnabled ? "feed-on" : "feed-off"}`}>
-                {liveEnabled ? "Auto refresh 20s" : "Feed paused"}
+                {liveEnabled
+                  ? `Auto refresh ${Math.round(config.marketFeedRefreshMs / 1000)}s`
+                  : "Feed paused"}
               </span>
               <button
                 type="button"
