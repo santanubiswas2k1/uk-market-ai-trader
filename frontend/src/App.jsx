@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { getHealth, getPrediction, searchSymbols } from "./api";
+import { getHealth, getLiveQuote, getPrediction, searchSymbols } from "./api";
 import { initialiseAuth, msal, signIn, signOut } from "./auth";
 import { config } from "./config";
 
@@ -138,6 +138,10 @@ export default function App() {
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [searchingSymbols, setSearchingSymbols] = useState(false);
   const [prediction, setPrediction] = useState(null);
+  const [liveQuote, setLiveQuote] = useState(null);
+  const [liveEnabled, setLiveEnabled] = useState(true);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [liveError, setLiveError] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -163,6 +167,44 @@ export default function App() {
         .catch(() => setHealth("offline"));
     }
   }, []);
+
+  useEffect(() => {
+    if (!account || !liveEnabled || !symbol.trim()) {
+      if (!liveEnabled) {
+        setLiveQuote(null);
+      }
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    async function refreshLiveQuote() {
+      setLiveLoading(true);
+      try {
+        const result = await getLiveQuote(symbol.trim().toUpperCase(), market);
+        if (!cancelled) {
+          setLiveQuote(result);
+          setLiveError("");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setLiveError(error.message);
+        }
+      } finally {
+        if (!cancelled) {
+          setLiveLoading(false);
+        }
+      }
+    }
+
+    refreshLiveQuote();
+    const timer = window.setInterval(refreshLiveQuote, 20000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [account, liveEnabled, market, symbol]);
 
   useEffect(() => {
     if (!account) {
@@ -232,6 +274,8 @@ export default function App() {
 
     setMarket(nextMarket);
     setPrediction(null);
+    setLiveQuote(null);
+    setLiveError("");
     setMessage("");
     setCompanyQuery("");
     setSelectedCompany(null);
@@ -334,6 +378,107 @@ export default function App() {
             Research and paper trading only. Predictions are probabilistic and are
             not financial advice.
           </div>
+        </section>
+
+        <section className="live-market-panel">
+          <div className="live-market-heading">
+            <div>
+              <div className="eyebrow">LIVE MARKET FEED</div>
+              <h3>{symbol || "Select a symbol"}</h3>
+            </div>
+            <div className="live-controls">
+              <span className={`feed-badge ${liveEnabled ? "feed-on" : "feed-off"}`}>
+                {liveEnabled ? "Auto refresh 20s" : "Feed paused"}
+              </span>
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => setLiveEnabled((value) => !value)}
+                disabled={!account}
+              >
+                {liveEnabled ? "Pause live feed" : "Resume live feed"}
+              </button>
+            </div>
+          </div>
+
+          {!account && (
+            <div className="live-placeholder">Sign in to load the market feed.</div>
+          )}
+
+          {account && liveEnabled && liveLoading && !liveQuote && (
+            <div className="live-placeholder">Loading latest market quote…</div>
+          )}
+
+          {account && liveError && (
+            <div className="alert error">{liveError}</div>
+          )}
+
+          {account && liveQuote && (
+            <>
+              <div className="live-quote-grid">
+                <article className="live-price-card">
+                  <span className="live-label">Current quote</span>
+                  <strong>{Number(liveQuote.price).toFixed(2)}</strong>
+                  <span
+                    className={`live-change ${
+                      liveQuote.change_percent >= 0 ? "positive" : "negative"
+                    }`}
+                  >
+                    {liveQuote.change >= 0 ? "+" : ""}
+                    {Number(liveQuote.change).toFixed(2)}
+                    {" · "}
+                    {liveQuote.change_percent >= 0 ? "+" : ""}
+                    {pct(liveQuote.change_percent)}
+                  </span>
+                </article>
+
+                <article className="live-stat">
+                  <span>Previous close</span>
+                  <strong>{Number(liveQuote.previous_close).toFixed(2)}</strong>
+                </article>
+                <article className="live-stat">
+                  <span>Day high</span>
+                  <strong>
+                    {typeof liveQuote.day_high === "number"
+                      ? liveQuote.day_high.toFixed(2)
+                      : "—"}
+                  </strong>
+                </article>
+                <article className="live-stat">
+                  <span>Day low</span>
+                  <strong>
+                    {typeof liveQuote.day_low === "number"
+                      ? liveQuote.day_low.toFixed(2)
+                      : "—"}
+                  </strong>
+                </article>
+                <article className="live-stat">
+                  <span>Volume</span>
+                  <strong>
+                    {typeof liveQuote.volume === "number"
+                      ? liveQuote.volume.toLocaleString()
+                      : "—"}
+                  </strong>
+                </article>
+              </div>
+
+              <div className="live-feed-meta">
+                <span>{liveQuote.exchange || currentMarket.label}</span>
+                <span>{liveQuote.currency || "Source quote units"}</span>
+                <span>
+                  Updated{" "}
+                  {liveQuote.last_update
+                    ? new Date(liveQuote.last_update).toLocaleTimeString()
+                    : "—"}
+                </span>
+                <span>
+                  {liveQuote.feed_status === "provider_delayed"
+                    ? "Provider-delayed / not exchange real-time"
+                    : liveQuote.feed_status}
+                </span>
+              </div>
+            </>
+          )}
         </section>
 
         <section className="search-panel">
