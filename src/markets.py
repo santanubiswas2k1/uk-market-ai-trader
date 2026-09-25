@@ -112,7 +112,10 @@ def symbol_matches_market(symbol: str, market: str) -> bool:
     config = get_market(market)
     normalized = symbol.upper().strip()
 
+    if market.strip().lower() == "us":
+        return bool(normalized)
+
     if config.symbol_suffixes:
         return normalized.endswith(config.symbol_suffixes)
 
-    return "." not in normalized
+    return bool(normalized)
