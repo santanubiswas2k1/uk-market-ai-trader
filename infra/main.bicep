@@ -85,19 +85,7 @@ resource frontendStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   kind: 'StorageV2'
   properties: {
     minimumTlsVersion: 'TLS1_2'
-    allowBlobPublicAccess: true
-  }
-}
-
-resource frontendBlobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
-  parent: frontendStorage
-  name: 'default'
-  properties: {
-    staticWebsite: {
-      enabled: true
-      indexDocument: 'index.html'
-      error404Document: 'index.html'
-    }
+    allowBlobPublicAccess: false
   }
 }
 
