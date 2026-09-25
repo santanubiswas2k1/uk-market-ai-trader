@@ -169,11 +169,19 @@ def list_prediction_records(
     prefix = f"{market.lower()}/" if market else None
     records: list[dict[str, Any]] = []
     try:
-        blobs = container.list_blobs(name_starts_with=prefix)
-        names = sorted(
-            (blob.name for blob in blobs if blob.name.endswith(".json")),
-            reverse=True,
-        )
+        blobs = [
+            blob
+            for blob in container.list_blobs(name_starts_with=prefix)
+            if blob.name.endswith(".json")
+        ]
+        names = [
+            blob.name
+            for blob in sorted(
+                blobs,
+                key=lambda item: item.last_modified,
+                reverse=True,
+            )
+        ]
     except AzureError:
         return []
 
