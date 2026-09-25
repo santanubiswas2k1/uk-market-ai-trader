@@ -3,7 +3,6 @@ from __future__ import annotations
 import pandas as pd
 import yfinance as yf
 
-
 CONTEXT_TICKERS = {
     "ftse": "^FTSE",
     "gbpusd": "GBPUSD=X",
