@@ -90,6 +90,87 @@ resource frontendStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
+
+resource functionStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
+  name: toLower('${prefix}fnst${suffix}')
+  location: location
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+  properties: {
+    minimumTlsVersion: 'TLS1_2'
+    allowBlobPublicAccess: false
+  }
+}
+
+resource functionPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
+  name: '${prefix}-feed-plan-${suffix}'
+  location: location
+  kind: 'linux'
+  sku: {
+    name: 'Y1'
+    tier: 'Dynamic'
+  }
+  properties: {
+    reserved: true
+  }
+}
+
+var functionStorageKey = listKeys(functionStorage.id, functionStorage.apiVersion).keys[0].value
+var functionStorageConnection = 'DefaultEndpointsProtocol=https;AccountName=${functionStorage.name};AccountKey=${functionStorageKey};EndpointSuffix=${environment().suffixes.storage}'
+
+resource marketFeedFunction 'Microsoft.Web/sites@2023-12-01' = {
+  name: '${prefix}-market-feed-${suffix}'
+  location: location
+  kind: 'functionapp,linux'
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${identity.id}': {}
+    }
+  }
+  properties: {
+    serverFarmId: functionPlan.id
+    httpsOnly: true
+    siteConfig: {
+      linuxFxVersion: 'Python|3.11'
+      minTlsVersion: '1.2'
+      ftpsState: 'Disabled'
+      appSettings: [
+        {
+          name: 'AzureWebJobsStorage'
+          value: functionStorageConnection
+        }
+        {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: '~4'
+        }
+        {
+          name: 'FUNCTIONS_WORKER_RUNTIME'
+          value: 'python'
+        }
+        {
+          name: 'AZURE_TENANT_ID'
+          value: subscription().tenantId
+        }
+        {
+          name: 'AZURE_CLIENT_ID'
+          value: identity.properties.clientId
+        }
+        {
+          name: 'KEY_VAULT_URL'
+          value: keyVault.properties.vaultUri
+        }
+        {
+          name: 'FRONTEND_ORIGIN'
+          value: frontendStorage.properties.primaryEndpoints.web
+        }
+      ]
+    }
+  }
+}
+
 resource acrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(acr.id, identity.id, acrPullRoleDefinitionId)
   scope: acr
@@ -141,3 +222,6 @@ output storageAccountUrl string = storage.properties.primaryEndpoints.blob
 output applicationInsightsName string = appInsights.name
 output frontendStorageName string = frontendStorage.name
 output frontendUrl string = frontendStorage.properties.primaryEndpoints.web
+
+output marketFeedFunctionName string = marketFeedFunction.name
+output marketFeedUrl string = 'https://${marketFeedFunction.properties.defaultHostName}/api'
