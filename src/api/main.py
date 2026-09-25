@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.security.auth import validate_bearer_token
 from src.services.prediction import predict_symbol
 
-app = FastAPI(title="UK Market AI Trader", version="0.3.0")
+app = FastAPI(title="UK Market AI Trader", version="0.4.0")
 
 frontend_origin = os.getenv("FRONTEND_ORIGIN", "").strip()
 if frontend_origin:
