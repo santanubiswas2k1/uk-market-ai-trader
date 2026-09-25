@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { getHealth, getPrediction } from "./api";
+import { getHealth, getPrediction, searchSymbols } from "./api";
 import { initialiseAuth, msal, signIn, signOut } from "./auth";
 import { config } from "./config";
 
@@ -30,6 +30,10 @@ export default function App() {
   const [account, setAccount] = useState(null);
   const [health, setHealth] = useState("checking");
   const [symbol, setSymbol] = useState("BARC.L");
+  const [companyQuery, setCompanyQuery] = useState("");
+  const [symbolMatches, setSymbolMatches] = useState([]);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [searchingSymbols, setSearchingSymbols] = useState(false);
   const [prediction, setPrediction] = useState(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -56,6 +60,42 @@ export default function App() {
         .catch(() => setHealth("offline"));
     }
   }, []);
+
+  useEffect(() => {
+    if (!account) {
+      setSymbolMatches([]);
+      return undefined;
+    }
+
+    const query = companyQuery.trim();
+    if (query.length < 2) {
+      setSymbolMatches([]);
+      return undefined;
+    }
+
+    const timer = window.setTimeout(async () => {
+      setSearchingSymbols(true);
+      try {
+        const results = await searchSymbols(query);
+        setSymbolMatches(results);
+      } catch (error) {
+        setMessage(error.message);
+        setSymbolMatches([]);
+      } finally {
+        setSearchingSymbols(false);
+      }
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [companyQuery, account]);
+
+  function chooseCompany(match) {
+    setSelectedCompany(match);
+    setSymbol(match.symbol);
+    setCompanyQuery(match.name);
+    setSymbolMatches([]);
+    setMessage("");
+  }
 
   async function runPrediction(nextSymbol = symbol) {
     setBusy(true);
@@ -155,15 +195,58 @@ export default function App() {
               runPrediction();
             }}
           >
-            <label htmlFor="symbol">London Stock Exchange symbol</label>
-            <div className="search-row">
+            <label htmlFor="company-search">Find a London-listed company</label>
+            <div className="company-search-wrap">
               <input
-                id="symbol"
-                value={symbol}
-                onChange={(event) => setSymbol(event.target.value)}
-                placeholder="e.g. BARC.L"
+                id="company-search"
+                value={companyQuery}
+                onChange={(event) => {
+                  setCompanyQuery(event.target.value);
+                  setSelectedCompany(null);
+                }}
+                placeholder="Search by company name or ticker, e.g. Barclays"
+                autoComplete="off"
               />
-              <button className="primary" disabled={!account || busy}>
+
+              {(searchingSymbols || symbolMatches.length > 0) && (
+                <div className="symbol-results">
+                  {searchingSymbols && (
+                    <div className="symbol-result muted-result">Searching LSE companies…</div>
+                  )}
+                  {!searchingSymbols && symbolMatches.map((match) => (
+                    <button
+                      type="button"
+                      className="symbol-result"
+                      key={match.symbol}
+                      onClick={() => chooseCompany(match)}
+                    >
+                      <span>
+                        <strong>{match.name}</strong>
+                        <small>{match.exchange}</small>
+                      </span>
+                      <b>{match.symbol}</b>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="selected-company-row">
+              <div>
+                <span className="selected-label">Selected</span>
+                <strong>{selectedCompany?.name || "Direct LSE ticker"}</strong>
+                <span className="selected-symbol">{symbol}</span>
+              </div>
+              <input
+                aria-label="LSE ticker"
+                value={symbol}
+                onChange={(event) => {
+                  setSymbol(event.target.value.toUpperCase());
+                  setSelectedCompany(null);
+                }}
+                placeholder="BARC.L"
+              />
+              <button className="primary" disabled={!account || busy || !symbol.trim()}>
                 {busy ? "Analysing…" : "Run prediction"}
               </button>
             </div>
@@ -174,7 +257,12 @@ export default function App() {
               <button
                 key={item}
                 className="ticker"
-                onClick={() => runPrediction(item)}
+                onClick={() => {
+                  setSymbol(item);
+                  setSelectedCompany(null);
+                  setCompanyQuery("");
+                  runPrediction(item);
+                }}
                 disabled={!account || busy}
               >
                 {item}
