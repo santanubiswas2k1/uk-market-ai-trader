@@ -14,8 +14,8 @@ def test_enriched_features_add_market_context():
     )
     context = pd.DataFrame(
         {
-            "ftse_close": [7500 + i for i in range(80)],
-            "gbpusd_close": [1.25 + i * 0.0001 for i in range(80)],
+            "market_close": [7500 + i for i in range(80)],
+            "fx_close": [1.25 + i * 0.0001 for i in range(80)],
         },
         index=idx,
     )
