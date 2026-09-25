@@ -30,8 +30,13 @@ def make_model() -> XGBClassifier:
     )
 
 
-def train_holdout(feature_frame: pd.DataFrame, test_fraction: float = 0.2) -> TrainResult:
+def train_holdout(
+    feature_frame: pd.DataFrame,
+    test_fraction: float = 0.2,
+    feature_columns: list[str] | None = None,
+) -> TrainResult:
     """Evaluate using a chronological holdout rather than a random split."""
+    feature_columns = feature_columns or FEATURE_COLUMNS
     if not 0 < test_fraction < 0.5:
         raise ValueError("test_fraction must be between 0 and 0.5")
     if len(feature_frame) < 50:
@@ -42,9 +47,9 @@ def train_holdout(feature_frame: pd.DataFrame, test_fraction: float = 0.2) -> Tr
     test = feature_frame.iloc[split:]
 
     model = make_model()
-    model.fit(train[FEATURE_COLUMNS], train["target_up_1d"])
+    model.fit(train[feature_columns], train["target_up_1d"])
 
-    prob = model.predict_proba(test[FEATURE_COLUMNS])[:, 1]
+    prob = model.predict_proba(test[feature_columns])[:, 1]
     pred = (prob >= 0.5).astype(int)
 
     return TrainResult(
@@ -56,10 +61,14 @@ def train_holdout(feature_frame: pd.DataFrame, test_fraction: float = 0.2) -> Tr
     )
 
 
-def train_final(feature_frame: pd.DataFrame) -> XGBClassifier:
-    """Train the production research model on every currently labelled row."""
+def train_final(
+    feature_frame: pd.DataFrame,
+    feature_columns: list[str] | None = None,
+) -> XGBClassifier:
+    """Train the research model on every currently labelled row."""
+    feature_columns = feature_columns or FEATURE_COLUMNS
     if len(feature_frame) < 50:
         raise ValueError("At least 50 labelled rows are required")
     model = make_model()
-    model.fit(feature_frame[FEATURE_COLUMNS], feature_frame["target_up_1d"])
+    model.fit(feature_frame[feature_columns], feature_frame["target_up_1d"])
     return model
