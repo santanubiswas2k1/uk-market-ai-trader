@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pandas as pd
-
 from src.features.technical import FEATURE_COLUMNS, build_feature_frame
 
 
