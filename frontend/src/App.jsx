@@ -107,6 +107,14 @@ const modelLabels = {
   catboost: "CatBoost",
 };
 
+const returnModelLabels = {
+  ridge: "Ridge",
+  random_forest: "Random Forest",
+  xgboost: "XGBoost",
+  lightgbm: "LightGBM",
+  catboost: "CatBoost",
+};
+
 function pct(value) {
   return typeof value === "number" ? `${(value * 100).toFixed(1)}%` : "—";
 }
@@ -463,7 +471,39 @@ export default function App() {
                     ? prediction.close_price.toFixed(2)
                     : "—"}
                 </div>
-                <div className="muted">Source quotation units</div>
+                <div className="muted">{prediction.quote_unit || "Source quotation units"}</div>
+              </article>
+
+              <article className="card">
+                <div className="card-label">Expected next-day return</div>
+                <div className="big-number">{pct(prediction.expected_return_1d)}</div>
+                <div className="muted">Regression ensemble</div>
+              </article>
+
+              <article className="card">
+                <div className="card-label">Expected next close</div>
+                <div className="big-number">
+                  {typeof prediction.expected_close === "number"
+                    ? prediction.expected_close.toFixed(2)
+                    : "—"}
+                </div>
+                <div className="muted">{prediction.quote_unit || "Source quotation units"}</div>
+              </article>
+
+              <article className="card">
+                <div className="card-label">Expected price range</div>
+                <div className="range-number">
+                  {typeof prediction.expected_range_low === "number"
+                    ? prediction.expected_range_low.toFixed(2)
+                    : "—"}
+                  {" – "}
+                  {typeof prediction.expected_range_high === "number"
+                    ? prediction.expected_range_high.toFixed(2)
+                    : "—"}
+                </div>
+                <div className="muted">
+                  {pct(prediction.expected_range_confidence)} volatility-based interval
+                </div>
               </article>
             </section>
 
@@ -497,6 +537,28 @@ export default function App() {
                     </article>
                   );
                 })}
+              </div>
+            </section>
+
+            <section className="ensemble-panel">
+              <div className="ensemble-heading">
+                <div>
+                  <div className="eyebrow">RETURN FORECAST</div>
+                  <h3>Individual model next-day return estimates</h3>
+                </div>
+                <div className="ensemble-meta">
+                  <span>Equal weight</span>
+                  <span>Next trading day</span>
+                </div>
+              </div>
+
+              <div className="model-grid">
+                {Object.entries(prediction.return_model_predictions || {}).map(([name, value]) => (
+                  <article className="model-card" key={name}>
+                    <div className="model-name">{returnModelLabels[name] || name}</div>
+                    <div className="model-probability">{pct(value)}</div>
+                  </article>
+                ))}
               </div>
             </section>
 
