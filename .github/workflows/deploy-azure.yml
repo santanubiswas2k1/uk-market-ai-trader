@@ -79,14 +79,46 @@ jobs:
           echo "market_feed_function=$MARKET_FEED_FUNCTION" >> "$GITHUB_OUTPUT"
           echo "market_feed_url=$MARKET_FEED_URL" >> "$GITHUB_OUTPUT"
 
+      - name: Grant deploy identity Key Vault secret write access
+        if: ${{ env.TWELVE_DATA_API_KEY != '' }}
+        shell: bash
+        run: |
+          DEPLOY_OBJECT_ID=$(az ad sp show \
+            --id "${{ vars.AZURE_CLIENT_ID }}" \
+            --query id \
+            -o tsv)
+
+          VAULT_ID=$(az keyvault show \
+            --name "${{ steps.infra.outputs.key_vault_name }}" \
+            --query id \
+            -o tsv)
+
+          az role assignment create \
+            --assignee-object-id "$DEPLOY_OBJECT_ID" \
+            --assignee-principal-type ServicePrincipal \
+            --role "Key Vault Secrets Officer" \
+            --scope "$VAULT_ID" \
+            --output none
+
       - name: Store Twelve Data API key in Key Vault
         if: ${{ env.TWELVE_DATA_API_KEY != '' }}
+        shell: bash
         run: |
-          az keyvault secret set \
-            --vault-name "${{ steps.infra.outputs.key_vault_name }}" \
-            --name twelve-data-api-key \
-            --value "$TWELVE_DATA_API_KEY" \
-            --output none
+          for attempt in 1 2 3 4 5 6; do
+            if az keyvault secret set \
+              --vault-name "${{ steps.infra.outputs.key_vault_name }}" \
+              --name twelve-data-api-key \
+              --value "$TWELVE_DATA_API_KEY" \
+              --output none; then
+              exit 0
+            fi
+
+            echo "Key Vault RBAC may still be propagating; retrying in 10 seconds..."
+            sleep 10
+          done
+
+          echo "Unable to store Twelve Data API key after RBAC retries."
+          exit 1
 
       - name: Deploy market feed function
         uses: Azure/functions-action@v1
