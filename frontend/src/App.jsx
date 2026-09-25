@@ -339,6 +339,7 @@ export default function App() {
               <span>Client ID: {config.entraClientId ? "loaded" : "missing"}</span>
               <span>Tenant ID: {config.tenantId ? "loaded" : "missing"}</span>
               <span>API scope: {config.apiScope ? "loaded" : "missing"}</span>
+              <span>Market feed: {config.marketFeedBaseUrl ? "loaded" : "missing"}</span>
             </div>
           </div>
         )}
@@ -383,7 +384,7 @@ export default function App() {
         <section className="live-market-panel">
           <div className="live-market-heading">
             <div>
-              <div className="eyebrow">LIVE MARKET FEED</div>
+              <div className="eyebrow">MARKET DATA FEED</div>
               <h3>{symbol || "Select a symbol"}</h3>
             </div>
             <div className="live-controls">
@@ -472,9 +473,9 @@ export default function App() {
                     : "—"}
                 </span>
                 <span>
-                  {liveQuote.feed_status === "provider_delayed"
-                    ? "Provider-delayed / not exchange real-time"
-                    : liveQuote.feed_status}
+                  {liveQuote.feed_source || "Market data provider"}
+                  {" · "}
+                  Real-time/delayed according to provider entitlement
                 </span>
               </div>
             </>
