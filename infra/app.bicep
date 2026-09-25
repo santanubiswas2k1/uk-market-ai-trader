@@ -7,6 +7,7 @@ param keyVaultUrl string
 param tenantId string
 param apiAudience string
 param image string
+param frontendOrigin string
 
 resource environment 'Microsoft.App/managedEnvironments@2024-03-01' existing = {
   name: environmentName
@@ -67,6 +68,10 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'KEY_VAULT_URL'
               value: keyVaultUrl
+            }
+            {
+              name: 'FRONTEND_ORIGIN'
+              value: frontendOrigin
             }
           ]
           resources: {
