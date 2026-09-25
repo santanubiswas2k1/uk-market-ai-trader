@@ -1,5 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { getHealth, getLiveQuote, getPrediction, searchSymbols } from "./api";
+import {
+  getHealth,
+  getLiveQuote,
+  getPerformance,
+  getPrediction,
+  searchSymbols,
+} from "./api";
 import { initialiseAuth, msal, signIn, signOut } from "./auth";
 import { config } from "./config";
 
@@ -138,6 +144,8 @@ export default function App() {
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [searchingSymbols, setSearchingSymbols] = useState(false);
   const [prediction, setPrediction] = useState(null);
+  const [performance, setPerformance] = useState(null);
+  const [performanceLoading, setPerformanceLoading] = useState(false);
   const [liveQuote, setLiveQuote] = useState(null);
   const [liveEnabled, setLiveEnabled] = useState(true);
   const [liveLoading, setLiveLoading] = useState(false);
@@ -167,6 +175,37 @@ export default function App() {
         .catch(() => setHealth("offline"));
     }
   }, []);
+
+  useEffect(() => {
+    if (!account) {
+      setPerformance(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setPerformanceLoading(true);
+
+    getPerformance(market)
+      .then((result) => {
+        if (!cancelled) {
+          setPerformance(result);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPerformance(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setPerformanceLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [account, market]);
 
   useEffect(() => {
     if (!account || !liveEnabled || !symbol.trim()) {
@@ -255,6 +294,13 @@ export default function App() {
       setSymbol(normalized);
       const result = await getPrediction(normalized, market);
       setPrediction(result);
+
+      try {
+        const latestPerformance = await getPerformance(market);
+        setPerformance(latestPerformance);
+      } catch {
+        // A prediction should still be shown if performance refresh is unavailable.
+      }
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -277,6 +323,7 @@ export default function App() {
 
     setMarket(nextMarket);
     setPrediction(null);
+    setPerformance(null);
     setLiveQuote(null);
     setLiveError("");
     setMessage("");
@@ -483,6 +530,85 @@ export default function App() {
                   Real-time/delayed according to provider entitlement
                 </span>
               </div>
+            </>
+          )}
+        </section>
+
+        <section className="performance-panel">
+          <div className="ensemble-heading">
+            <div>
+              <div className="eyebrow">FORWARD PERFORMANCE</div>
+              <h3>Stored live prediction accuracy</h3>
+            </div>
+            <div className="ensemble-meta">
+              <span>{currentMarket.label}</span>
+              <span>First forecast per ticker/day</span>
+            </div>
+          </div>
+
+          {!account && (
+            <div className="live-placeholder">
+              Sign in to view forward prediction performance.
+            </div>
+          )}
+
+          {account && performanceLoading && !performance && (
+            <div className="live-placeholder">
+              Checking completed forecasts…
+            </div>
+          )}
+
+          {account && performance && (
+            <>
+              <div className="performance-grid">
+                <article className="metric-card">
+                  <span>Recorded</span>
+                  <strong>{performance.total_predictions ?? 0}</strong>
+                </article>
+                <article className="metric-card">
+                  <span>Evaluated</span>
+                  <strong>{performance.evaluated_predictions ?? 0}</strong>
+                </article>
+                <article className="metric-card">
+                  <span>Pending</span>
+                  <strong>{performance.pending_predictions ?? 0}</strong>
+                </article>
+                <article className="metric-card">
+                  <span>Direction accuracy</span>
+                  <strong>{pct(performance.direction_accuracy)}</strong>
+                </article>
+                <article className="metric-card">
+                  <span>Signal accuracy</span>
+                  <strong>{pct(performance.signal_accuracy)}</strong>
+                </article>
+                <article className="metric-card">
+                  <span>Brier score</span>
+                  <strong>{metric(performance.brier_score)}</strong>
+                </article>
+                <article className="metric-card">
+                  <span>Expected-close MAE</span>
+                  <strong>{metric(performance.expected_close_mae, 2)}</strong>
+                </article>
+                <article className="metric-card">
+                  <span>Close MAPE</span>
+                  <strong>{pct(performance.expected_close_mape)}</strong>
+                </article>
+                <article className="metric-card">
+                  <span>Return MAE</span>
+                  <strong>{pct(performance.return_mae)}</strong>
+                </article>
+                <article className="metric-card">
+                  <span>Range hit rate</span>
+                  <strong>{pct(performance.range_hit_rate)}</strong>
+                </article>
+              </div>
+
+              {performance.evaluated_predictions === 0 && (
+                <p className="context-note">
+                  Predictions are being recorded. Accuracy will appear after a later
+                  completed trading-day close is available for comparison.
+                </p>
+              )}
             </>
           )}
         </section>
