@@ -2,15 +2,6 @@ name: Deploy Azure serverless
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "src/**"
-      - "infra/**"
-      - "Dockerfile"
-      - ".dockerignore"
-      - "pyproject.toml"
-      - ".github/workflows/deploy-azure.yml"
 
 permissions:
   id-token: write
