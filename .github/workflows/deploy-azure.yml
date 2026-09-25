@@ -16,6 +16,7 @@ env:
   LOCATION: ${{ vars.AZURE_LOCATION || 'uksouth' }}
   PREFIX: ukmai
   APP_NAME: uk-market-ai-trader
+  API_AUDIENCE: ${{ vars.AZURE_API_AUDIENCE }}
 
 jobs:
   deploy:
@@ -52,12 +53,18 @@ jobs:
           ENVIRONMENT_NAME=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.environmentName.value -o tsv)
           IDENTITY_NAME=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.identityName.value -o tsv)
           KEY_VAULT_URL=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.keyVaultUrl.value -o tsv)
+          FRONTEND_STORAGE=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.frontendStorageName.value -o tsv)
+          FRONTEND_URL=$(az deployment group show -g "$RESOURCE_GROUP" -n serverless-base --query properties.outputs.frontendUrl.value -o tsv)
+          FRONTEND_ORIGIN="${FRONTEND_URL%/}"
 
           echo "acr_name=$ACR_NAME" >> "$GITHUB_OUTPUT"
           echo "acr_login_server=$ACR_LOGIN_SERVER" >> "$GITHUB_OUTPUT"
           echo "environment_name=$ENVIRONMENT_NAME" >> "$GITHUB_OUTPUT"
           echo "identity_name=$IDENTITY_NAME" >> "$GITHUB_OUTPUT"
           echo "key_vault_url=$KEY_VAULT_URL" >> "$GITHUB_OUTPUT"
+          echo "frontend_storage=$FRONTEND_STORAGE" >> "$GITHUB_OUTPUT"
+          echo "frontend_url=$FRONTEND_URL" >> "$GITHUB_OUTPUT"
+          echo "frontend_origin=$FRONTEND_ORIGIN" >> "$GITHUB_OUTPUT"
 
       - name: Build container in ACR
         run: |
@@ -83,17 +90,68 @@ jobs:
               keyVaultUrl="${{ steps.infra.outputs.key_vault_url }}" \
               tenantId="${{ vars.AZURE_TENANT_ID }}" \
               apiAudience="${{ vars.AZURE_API_AUDIENCE }}" \
+              frontendOrigin="${{ steps.infra.outputs.frontend_origin }}" \
               image="$IMAGE" \
             --output none
 
-      - name: Smoke test
+      - name: Read API URL
+        id: app
         shell: bash
         run: |
-          APP_URL=$(az containerapp show \
+          FQDN=$(az containerapp show \
             --resource-group "$RESOURCE_GROUP" \
             --name "$APP_NAME" \
             --query "properties.configuration.ingress.fqdn" \
             -o tsv)
+          echo "api_url=https://$FQDN" >> "$GITHUB_OUTPUT"
 
-          echo "Application URL: https://$APP_URL"
-          curl --fail --retry 8 --retry-delay 10 "https://$APP_URL/health"
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Generate frontend runtime config
+        shell: bash
+        run: |
+          SPA_CLIENT_ID="${API_AUDIENCE#api://}"
+          cat > frontend/public/config.js <<EOF
+          window.__APP_CONFIG__ = {
+            apiBaseUrl: "${{ steps.app.outputs.api_url }}",
+            entraClientId: "$SPA_CLIENT_ID",
+            tenantId: "${{ vars.AZURE_TENANT_ID }}",
+            apiScope: "${{ vars.AZURE_API_AUDIENCE }}/access_as_user"
+          };
+          EOF
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+
+      - name: Publish static frontend
+        shell: bash
+        run: |
+          ACCOUNT_KEY=$(az storage account keys list \
+            --resource-group "$RESOURCE_GROUP" \
+            --account-name "${{ steps.infra.outputs.frontend_storage }}" \
+            --query "[0].value" -o tsv)
+
+          az storage blob upload-batch \
+            --account-name "${{ steps.infra.outputs.frontend_storage }}" \
+            --account-key "$ACCOUNT_KEY" \
+            --destination '$web' \
+            --source frontend/dist \
+            --overwrite \
+            --output none
+
+      - name: Smoke test API and frontend
+        shell: bash
+        run: |
+          echo "API URL: ${{ steps.app.outputs.api_url }}"
+          echo "Frontend URL: ${{ steps.infra.outputs.frontend_url }}"
+
+          curl --fail --retry 8 --retry-delay 10 "${{ steps.app.outputs.api_url }}/health"
+          curl --fail --retry 8 --retry-delay 5 "${{ steps.infra.outputs.frontend_url }}"
