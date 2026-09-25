@@ -110,8 +110,8 @@ def predict_symbol(symbol: str, period: str = "5y") -> Prediction:
             labelled,
             ENRICHED_FEATURE_COLUMNS,
             min_train_rows=min_train_rows,
-            test_rows=20,
-            step_rows=20,
+            test_rows=40,
+            step_rows=40,
             weights=weights,
         )
         models = train_final_ensemble(labelled, ENRICHED_FEATURE_COLUMNS)
