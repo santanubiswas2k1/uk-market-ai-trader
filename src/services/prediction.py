@@ -167,7 +167,7 @@ def predict_symbol(symbol: str, market: str = "uk", period: str = "5y") -> Predi
 
     try:
         decision_context = load_live_decision_context(symbol)
-    except Exception:
+    except Exception:  # noqa: BLE001
         decision_context = {
             "sector": None,
             "sector_proxy": None,
