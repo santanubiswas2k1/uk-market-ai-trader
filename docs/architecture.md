@@ -1,35 +1,66 @@
 # Architecture
 
-## MVP
+## Research data flow
 
-1. Market data is ingested for a small liquid LSE universe.
-2. Raw data is stored in Azure Data Lake Storage Gen2.
-3. Feature engineering produces technical and contextual features.
-4. Azure ML or a containerized training job trains and registers models.
-5. The API serves prediction outputs.
-6. Paper-trading logic evaluates signals after costs.
-7. Application Insights and Azure Monitor provide observability.
+```text
+LSE share history ───────────────┐
+FTSE 100 context ────────────────┤
+GBP/USD context ─────────────────┤
+Licensed RNS events (optional) ──┤
+UK macro series (optional) ──────┘
+                  │
+                  v
+        Feature engineering
+                  │
+                  v
+       Expanding walk-forward
+             evaluation
+                  │
+                  v
+          XGBoost training
+                  │
+                  v
+          Prediction API
+                  │
+                  v
+          Paper-trading layer
+```
+
+## Azure target architecture
+
+For production deployment:
+
+1. Azure Functions or Container Apps ingest market/context/event data.
+2. Event Hubs can be introduced for streaming feeds.
+3. ADLS Gen2 stores immutable raw and curated datasets.
+4. Azure ML trains, tracks and registers models.
+5. A containerized FastAPI service exposes inference.
+6. Azure Key Vault stores third-party service secrets.
+7. Managed Identity authenticates Azure workloads.
+8. Application Insights/Azure Monitor provide observability.
 
 ## Authentication
 
 User authentication uses Microsoft Entra ID with OAuth2/OIDC.
 
-Protected API requests carry a short-lived JWT access token. The API validates:
+Protected API requests carry short-lived JWT access tokens. The API validates signature, issuer, audience, expiry, and then exposes roles/scopes to application authorization logic.
 
-- signature
-- issuer
-- audience
-- expiry
-- roles/scopes
+Azure-hosted workloads should use Managed Identity rather than embedded Azure credentials.
 
-Azure-hosted workloads should use Managed Identity rather than embedded credentials.
+## RNS design
 
-Service secrets such as market-data or broker API keys belong in Azure Key Vault. They must never be exposed to the frontend or committed to Git.
+The repository does not scrape regulatory-news web pages. `aggregate_rns_daily` accepts normalized, vendor-supplied events with timestamps and symbols, then generates count, sentiment, and importance features.
 
-## Data roadmap
+This keeps data licensing and transport separate from model feature engineering.
 
-MVP data can use delayed or free sources for research. Production use should migrate to properly licensed LSE, RNS, order-book, and news feeds.
+## Macro design
+
+`normalize_macro_series` accepts dated macro observations, such as Bank Rate or CPI. For backtesting, the supplied date should represent when the value became known to the market (release/effective timestamp where appropriate) to avoid look-ahead bias.
+
+## Evaluation
+
+The default predictor uses expanding-window walk-forward evaluation. Every test fold is scored using a model fitted only on earlier rows.
 
 ## Trading roadmap
 
-The repository starts in paper-trading mode. Live execution should only be added after robust walk-forward testing, transaction-cost modeling, slippage analysis, monitoring, and operational controls.
+The repository remains paper-trading only. Live execution should be added only after stronger data licensing, calibration, transaction-cost/slippage modelling, monitoring, and operational risk controls.
