@@ -8,6 +8,7 @@ from src.markets import MARKETS
 from src.security.auth import validate_bearer_token
 from src.services.prediction import predict_symbol
 from src.services.prediction_history import performance_summary, record_prediction
+from src.services.scanner import scan_market
 from src.services.symbols import search_symbols
 
 app = FastAPI(title="Global Market AI Trader", version="0.6.0")
@@ -73,6 +74,15 @@ def symbol_search(q: str, claims: AuthClaims, market: str = "uk", limit: int = 8
         "market": market,
         "results": [match.to_dict() for match in matches],
     }
+
+
+@app.get("/scanner")
+def scanner(claims: AuthClaims, market: str = "uk", limit: int = 10) -> dict:
+    """Return explainable movement candidates for the selected market."""
+    try:
+        return scan_market(market=market, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/performance")
