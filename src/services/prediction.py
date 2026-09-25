@@ -9,6 +9,7 @@ from src.features.context import (
 )
 from src.ingest.context_data import load_market_context
 from src.ingest.market_data import load_daily_history
+from src.ingest.news import load_live_decision_context
 from src.markets import get_market, symbol_matches_market
 from src.models.ensemble import (
     EnsembleEvaluation,
@@ -41,6 +42,7 @@ class Prediction:
     walk_forward_folds: int
     labelled_rows: int
     feature_count: int
+    decision_context: dict
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -89,7 +91,7 @@ def predict_symbol(symbol: str, market: str = "uk", period: str = "5y") -> Predi
         )
 
     stock = load_daily_history(symbol, period=period)
-    context = load_market_context(market=market, period=period)
+    context = load_market_context(market=market, period=period, symbol=symbol)
 
     labelled = build_enriched_features(stock, context)
     live_features = build_enriched_feature_frame(stock, context)
@@ -163,6 +165,22 @@ def predict_symbol(symbol: str, market: str = "uk", period: str = "5y") -> Predi
     last_index = latest.index[-1]
     as_of = last_index.isoformat() if hasattr(last_index, "isoformat") else str(last_index)
 
+    try:
+        decision_context = load_live_decision_context(symbol)
+    except Exception:
+        decision_context = {
+            "sector": None,
+            "sector_proxy": None,
+            "news_count_24h": 0,
+            "news_sentiment": 0.0,
+            "recent_headlines": [],
+            "next_earnings_date": None,
+            "days_to_earnings": None,
+            "earnings_within_7d": False,
+            "news_used_in_model": False,
+            "earnings_used_in_model": False,
+        }
+
     return Prediction(
         market=market,
         market_label=market_config.label,
@@ -190,4 +208,5 @@ def predict_symbol(symbol: str, market: str = "uk", period: str = "5y") -> Predi
         walk_forward_folds=evaluation.folds,
         labelled_rows=len(labelled),
         feature_count=len(ENRICHED_FEATURE_COLUMNS),
+        decision_context=decision_context,
     )
