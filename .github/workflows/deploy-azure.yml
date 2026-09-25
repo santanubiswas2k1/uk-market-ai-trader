@@ -21,6 +21,8 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -78,9 +80,7 @@ jobs:
           echo "market_feed_url=$MARKET_FEED_URL" >> "$GITHUB_OUTPUT"
 
       - name: Store Twelve Data API key in Key Vault
-        if: ${{ secrets.TWELVE_DATA_API_KEY != '' }}
-        env:
-          TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
+        if: ${{ env.TWELVE_DATA_API_KEY != '' }}
         run: |
           az keyvault secret set \
             --vault-name "${{ steps.infra.outputs.key_vault_name }}" \
