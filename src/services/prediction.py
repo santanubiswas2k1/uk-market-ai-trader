@@ -10,7 +10,7 @@ from src.features.context import (
 )
 from src.ingest.context_data import load_market_context
 from src.ingest.market_data import load_daily_history
-from src.ingest.news import load_live_decision_context
+from src.ingest.news import fuse_news_sentiment, load_live_decision_context
 from src.markets import get_market, symbol_matches_market
 from src.models.ensemble import (
     EnsembleEvaluation,
@@ -34,6 +34,8 @@ class Prediction:
     close_price: float
     probability_up: float
     probability_down: float
+    base_probability_up: float
+    base_probability_down: float
     signal: str
     model_probabilities: dict[str, float]
     model_weights: dict[str, float]
@@ -47,11 +49,16 @@ class Prediction:
     feature_count: int
     quote_unit: str
     expected_return_1d: float
+    base_expected_return_1d: float
     expected_close: float
     expected_range_low: float
     expected_range_high: float
     expected_range_confidence: float
     return_model_predictions: dict[str, float]
+    news_sentiment_weight: float
+    news_probability_up: float
+    earnings_range_multiplier: float
+    news_overlay_backtested: bool
     decision_context: dict
 
     def to_dict(self) -> dict:
@@ -164,26 +171,64 @@ def predict_symbol(symbol: str, market: str = "uk", period: str = "5y") -> Predi
             },
         )
 
-    model_probabilities, probability_up = predict_ensemble(
+    model_probabilities, base_probability_up = predict_ensemble(
         models,
         latest,
         ENRICHED_FEATURE_COLUMNS,
         weights=weights,
     )
-    probability_down = 1.0 - probability_up
+    base_probability_down = 1.0 - base_probability_up
 
-    return_model_predictions, expected_return_1d = predict_return_ensemble(
+    return_model_predictions, base_expected_return_1d = predict_return_ensemble(
         return_models,
         latest,
         ENRICHED_FEATURE_COLUMNS,
     )
 
+    annualised_vol = float(latest["vol_10d"].iloc[0])
+    daily_vol = annualised_vol / sqrt(252.0)
+
+    try:
+        decision_context = load_live_decision_context(symbol)
+    except Exception:  # noqa: BLE001
+        decision_context = {
+            "sector": None,
+            "sector_proxy": None,
+            "news_count_24h": 0,
+            "news_sentiment": 0.0,
+            "recent_headlines": [],
+            "next_earnings_date": None,
+            "days_to_earnings": None,
+            "earnings_within_7d": False,
+        }
+
+    fusion = fuse_news_sentiment(
+        base_probability_up=base_probability_up,
+        base_expected_return=base_expected_return_1d,
+        daily_vol=daily_vol,
+        context=decision_context,
+    )
+    probability_up = float(fusion["adjusted_probability_up"])
+    probability_down = 1.0 - probability_up
+    expected_return_1d = float(fusion["adjusted_expected_return"])
+    earnings_range_multiplier = float(fusion["earnings_range_multiplier"])
+
+    decision_context["news_used_in_algorithm"] = bool(
+        fusion["news_used_in_algorithm"]
+    )
+    decision_context["news_weight"] = round(float(fusion["news_weight"]), 4)
+    decision_context["news_probability_up"] = round(
+        float(fusion["news_probability_up"]),
+        4,
+    )
+    decision_context["news_overlay_backtested"] = bool(
+        fusion["news_overlay_backtested"]
+    )
+
     close_price = float(latest["close"].iloc[0])
     expected_close = close_price * (1.0 + expected_return_1d)
 
-    annualised_vol = float(latest["vol_10d"].iloc[0])
-    daily_vol = annualised_vol / sqrt(252.0)
-    range_z = 1.2816
+    range_z = 1.2816 * earnings_range_multiplier
     expected_range_low = max(
         0.0,
         close_price * (1.0 + expected_return_1d - range_z * daily_vol),
@@ -202,22 +247,6 @@ def predict_symbol(symbol: str, market: str = "uk", period: str = "5y") -> Predi
     last_index = latest.index[-1]
     as_of = last_index.isoformat() if hasattr(last_index, "isoformat") else str(last_index)
 
-    try:
-        decision_context = load_live_decision_context(symbol)
-    except Exception:  # noqa: BLE001
-        decision_context = {
-            "sector": None,
-            "sector_proxy": None,
-            "news_count_24h": 0,
-            "news_sentiment": 0.0,
-            "recent_headlines": [],
-            "next_earnings_date": None,
-            "days_to_earnings": None,
-            "earnings_within_7d": False,
-            "news_used_in_model": False,
-            "earnings_used_in_model": False,
-        }
-
     return Prediction(
         market=market,
         market_label=market_config.label,
@@ -226,6 +255,8 @@ def predict_symbol(symbol: str, market: str = "uk", period: str = "5y") -> Predi
         close_price=close_price,
         probability_up=round(probability_up, 4),
         probability_down=round(probability_down, 4),
+        base_probability_up=round(base_probability_up, 4),
+        base_probability_down=round(base_probability_down, 4),
         signal=signal,
         model_probabilities={
             name: round(value, 4) for name, value in model_probabilities.items()
@@ -238,7 +269,7 @@ def predict_symbol(symbol: str, market: str = "uk", period: str = "5y") -> Predi
             }
             for name, metrics in evaluation.model_metrics.items()
         },
-        ensemble_method="equal_weight",
+        ensemble_method="equal_weight_plus_news_sentiment_fusion",
         model_source=model_source,
         walk_forward_accuracy=round(evaluation.accuracy, 4),
         walk_forward_brier=round(evaluation.brier, 4),
@@ -247,6 +278,7 @@ def predict_symbol(symbol: str, market: str = "uk", period: str = "5y") -> Predi
         feature_count=len(ENRICHED_FEATURE_COLUMNS),
         quote_unit=market_config.quote_unit,
         expected_return_1d=round(expected_return_1d, 6),
+        base_expected_return_1d=round(base_expected_return_1d, 6),
         expected_close=round(expected_close, 4),
         expected_range_low=round(expected_range_low, 4),
         expected_range_high=round(expected_range_high, 4),
@@ -255,5 +287,9 @@ def predict_symbol(symbol: str, market: str = "uk", period: str = "5y") -> Predi
             name: round(value, 6)
             for name, value in return_model_predictions.items()
         },
+        news_sentiment_weight=round(float(fusion["news_weight"]), 4),
+        news_probability_up=round(float(fusion["news_probability_up"]), 4),
+        earnings_range_multiplier=round(earnings_range_multiplier, 2),
+        news_overlay_backtested=bool(fusion["news_overlay_backtested"]),
         decision_context=decision_context,
     )
