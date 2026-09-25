@@ -451,6 +451,9 @@ export default function App() {
               <article className="card">
                 <div className="card-label">Probability up</div>
                 <div className="big-number">{pct(prediction.probability_up)}</div>
+                <div className="muted">
+                  Base ML {pct(prediction.base_probability_up)}
+                </div>
                 <div className="progress">
                   <span style={{ width: pct(prediction.probability_up) }} />
                 </div>
@@ -477,7 +480,9 @@ export default function App() {
               <article className="card">
                 <div className="card-label">Expected next-day return</div>
                 <div className="big-number">{pct(prediction.expected_return_1d)}</div>
-                <div className="muted">Regression ensemble</div>
+                <div className="muted">
+                  Base ML {pct(prediction.base_expected_return_1d)}
+                </div>
               </article>
 
               <article className="card">
@@ -569,8 +574,10 @@ export default function App() {
                   <h3>News, earnings and sector context</h3>
                 </div>
                 <div className="ensemble-meta">
-                  <span>Live context</span>
-                  <span>Not yet used for training</span>
+                  <span>Live sentiment fusion</span>
+                  <span>
+                    Weight {pct(prediction.news_sentiment_weight)}
+                  </span>
                 </div>
               </div>
 
@@ -592,6 +599,10 @@ export default function App() {
                   <strong>{metric(prediction.decision_context?.news_sentiment, 2)}</strong>
                 </article>
                 <article className="metric-card">
+                  <span>News-implied up probability</span>
+                  <strong>{pct(prediction.news_probability_up)}</strong>
+                </article>
+                <article className="metric-card">
                   <span>Days to earnings</span>
                   <strong>{prediction.decision_context?.days_to_earnings ?? "—"}</strong>
                 </article>
@@ -606,9 +617,11 @@ export default function App() {
               )}
 
               <p className="context-note">
-                Historical model inputs now include market, sector, volatility, rates,
-                oil and gold context. Current headlines and upcoming earnings are shown
-                separately until a historical news archive is connected.
+                Current company-news sentiment now adjusts the live probability and
+                expected return with a bounded weight. Earnings proximity widens the
+                expected price range. The historical walk-forward metrics still cover
+                the price/context ML models only until a point-in-time historical news
+                archive is connected.
               </p>
             </section>
 
