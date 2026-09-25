@@ -6,6 +6,8 @@ import { config } from "./config";
 const quickSymbols = {
   uk: ["BARC.L", "LLOY.L", "SHEL.L", "AZN.L", "BP.L", "GSK.L"],
   us: ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META"],
+  india: ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS"],
+  uae: ["EMAAR.DU", "DEWA.DU", "FAB.AE", "ADCB.AE", "ALDAR.AE", "IHC.AE"],
 };
 
 const marketConfig = {
@@ -26,6 +28,24 @@ const marketConfig = {
     tickerPlaceholder: "AAPL",
     description:
       "US market support is being added with S&P 500, NASDAQ and volatility context.",
+  },
+  india: {
+    label: "India / NSE & BSE",
+    searchLabel: "Find an India-listed company",
+    placeholder: "Search by company name or ticker, e.g. Reliance",
+    directLabel: "Direct NSE/BSE ticker",
+    tickerPlaceholder: "RELIANCE.NS",
+    description:
+      "India market support is planned with NIFTY 50, Sensex and INR market context.",
+  },
+  uae: {
+    label: "UAE / DFM & ADX",
+    searchLabel: "Find a UAE-listed company",
+    placeholder: "Search by company name or ticker, e.g. Emaar",
+    directLabel: "Direct DFM/ADX ticker",
+    tickerPlaceholder: "EMAAR.DU",
+    description:
+      "UAE market support is planned with DFM, ADX and AED market context.",
   },
 };
 
@@ -145,13 +165,20 @@ export default function App() {
   }
 
   function changeMarket(nextMarket) {
+    const defaults = {
+      uk: "BARC.L",
+      us: "AAPL",
+      india: "RELIANCE.NS",
+      uae: "EMAAR.DU",
+    };
+
     setMarket(nextMarket);
     setPrediction(null);
     setMessage("");
     setCompanyQuery("");
     setSelectedCompany(null);
     setSymbolMatches([]);
-    setSymbol(nextMarket === "uk" ? "BARC.L" : "AAPL");
+    setSymbol(defaults[nextMarket] || "");
   }
 
   const currentMarket = marketConfig[market];
@@ -219,17 +246,20 @@ export default function App() {
             <div className="eyebrow">MARKET</div>
             <h3>Select market</h3>
           </div>
-          <div className="market-switcher" role="group" aria-label="Market selector">
-            {Object.entries(marketConfig).map(([key, item]) => (
-              <button
-                type="button"
-                key={key}
-                className={`market-button ${market === key ? "active" : ""}`}
-                onClick={() => changeMarket(key)}
-              >
-                {item.label}
-              </button>
-            ))}
+          <div className="market-dropdown-wrap">
+            <label htmlFor="market-select">Market</label>
+            <select
+              id="market-select"
+              className="market-select"
+              value={market}
+              onChange={(event) => changeMarket(event.target.value)}
+            >
+              {Object.entries(marketConfig).map(([key, item]) => (
+                <option key={key} value={key}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
           </div>
         </section>
 
@@ -248,10 +278,11 @@ export default function App() {
           </div>
         </section>
 
-        {market === "us" && (
+        {market !== "uk" && (
           <div className="alert">
-            <strong>US market selected.</strong> The market selector and US watchlist are ready,
-            but US company lookup and prediction are not enabled in the backend yet.
+            <strong>{currentMarket.label} selected.</strong> The market is available in the
+            selector and watchlist, but company lookup and prediction are not enabled for this
+            market in the backend yet.
           </div>
         )}
 
@@ -306,7 +337,7 @@ export default function App() {
                 <span className="selected-symbol">{symbol}</span>
               </div>
               <input
-                aria-label="LSE ticker"
+                aria-label="Market ticker"
                 value={symbol}
                 onChange={(event) => {
                   setSymbol(event.target.value.toUpperCase());
@@ -354,7 +385,7 @@ export default function App() {
         {account && !prediction && !busy && (
           <section className="empty-state">
             <h3>Ready to analyse</h3>
-            <p>{market === "uk" ? "Select a UK company above to run the current research model." : "US prediction support will be enabled in the next backend update."}</p>
+            <p>{market === "uk" ? "Select a UK company above to run the current research model." : `${currentMarket.label} prediction support will be enabled in a later backend update.`}</p>
           </section>
         )}
 
