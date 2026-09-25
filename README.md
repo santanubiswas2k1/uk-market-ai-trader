@@ -79,6 +79,12 @@ The walk-forward test repeatedly trains only on historical observations occurrin
 
 The returned `close_price` is the source quotation value. Many London-listed equities are quoted in **GBp (pence)** rather than GBP.
 
+## Azure serverless deployment
+
+The production target is Azure Container Apps (Consumption) with scale-to-zero, ACR, Managed Identity and Key Vault. Deployment uses GitHub Actions with Azure OIDC, so no long-lived Azure client secret is stored in GitHub.
+
+See [docs/azure-serverless.md](docs/azure-serverless.md) for the one-time Azure/Entra setup and deployment flow.
+
 ## Architecture
 
 See [docs/architecture.md](docs/architecture.md) and [docs/roadmap.md](docs/roadmap.md).
