@@ -134,7 +134,7 @@ class ScannerCandidate:
         return asdict(self)
 
 
-def _safe_float(value: float | int | np.floating | None, default: float = 0.0) -> float:
+def _safe_float(value: float | np.floating | None, default: float = 0.0) -> float:
     if value is None:
         return default
     number = float(value)
@@ -237,7 +237,7 @@ def _score_candidate(
         + earnings_component
         + gap_proxy_component
     )
-    score = int(round(max(0.0, min(100.0, raw_score))))
+    score = round(max(0.0, min(100.0, raw_score)))
 
     reasons: list[str] = []
     if technical["volume_ratio_20d"] >= 1.5:
