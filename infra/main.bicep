@@ -152,14 +152,6 @@ resource marketFeedFunction 'Microsoft.Web/sites@2023-12-01' = {
           value: 'python'
         }
         {
-          name: 'AzureWebJobsFeatureFlags'
-          value: 'EnableWorkerIndexing'
-        }
-        {
-          name: 'PYTHONPATH'
-          value: '/home/site/wwwroot/.python_packages/lib/site-packages'
-        }
-        {
           name: 'AZURE_TENANT_ID'
           value: subscription().tenantId
         }
