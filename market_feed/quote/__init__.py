@@ -1,5 +1,4 @@
 import azure.functions as func
-
 from shared import handle_quote
 
 
