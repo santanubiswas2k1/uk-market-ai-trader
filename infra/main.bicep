@@ -120,6 +120,8 @@ resource functionPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
 
 var functionStorageKey = functionStorage.listKeys().keys[0].value
 var functionStorageConnection = 'DefaultEndpointsProtocol=https;AccountName=${functionStorage.name};AccountKey=${functionStorageKey};EndpointSuffix=${az.environment().suffixes.storage}'
+var frontendWebUrl = frontendStorage.properties.primaryEndpoints.web
+var frontendOrigin = endsWith(frontendWebUrl, '/') ? substring(frontendWebUrl, 0, length(frontendWebUrl) - 1) : frontendWebUrl
 
 resource marketFeedFunction 'Microsoft.Web/sites@2023-12-01' = {
   name: '${prefix}-market-feed-${suffix}'
@@ -138,6 +140,12 @@ resource marketFeedFunction 'Microsoft.Web/sites@2023-12-01' = {
       linuxFxVersion: 'Python|3.11'
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
+      cors: {
+        allowedOrigins: [
+          frontendOrigin
+        ]
+        supportCredentials: false
+      }
       appSettings: [
         {
           name: 'AzureWebJobsStorage'
@@ -169,7 +177,7 @@ resource marketFeedFunction 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'FRONTEND_ORIGIN'
-          value: frontendStorage.properties.primaryEndpoints.web
+          value: frontendOrigin
         }
       ]
     }
