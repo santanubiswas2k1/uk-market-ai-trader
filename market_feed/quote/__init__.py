@@ -1,15 +1,9 @@
 import json
-import os
-
 import azure.functions as func
 
 
 def _error_response(detail: str, status_code: int = 500) -> func.HttpResponse:
-    origin = os.getenv("FRONTEND_ORIGIN", "").rstrip("/")
     headers = {
-        "Access-Control-Allow-Origin": origin or "*",
-        "Access-Control-Allow-Headers": "Authorization, Content-Type",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
         "Cache-Control": "no-store",
     }
     return func.HttpResponse(
