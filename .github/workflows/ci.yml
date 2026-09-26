@@ -16,7 +16,7 @@ jobs:
       - run: pytest -q
       - run: |
           python -m py_compile \
-            market_feed/shared.py \
+            market_feed/shared_code/market_feed.py \
             market_feed/health/__init__.py \
             market_feed/quote/__init__.py
       - run: ruff check .
