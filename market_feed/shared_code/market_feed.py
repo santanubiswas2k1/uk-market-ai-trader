@@ -190,23 +190,36 @@ def handle_quote(request: func.HttpRequest) -> func.HttpResponse:
     if exchange:
         params["exchange"] = exchange
 
+    params["apikey"] = _twelve_data_api_key()
     url = f"{TWELVE_DATA_BASE_URL}/quote?{urlencode(params)}"
 
     try:
-        response = httpx.get(
-            url,
-            headers={"Authorization": f"apikey {_twelve_data_api_key()}"},
-            timeout=12,
-        )
-        response.raise_for_status()
-        payload = response.json()
+        response = httpx.get(url, timeout=12)
     except httpx.HTTPError:
         return json_response(
-            {"detail": "Market-data provider is temporarily unavailable"},
+            {"detail": "Unable to connect to the market-data provider"},
             status_code=502,
         )
     except RuntimeError as exc:
         return json_response({"detail": str(exc)}, status_code=503)
+
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = {}
+
+    if not response.is_success:
+        provider_detail = payload.get("message") if isinstance(payload, dict) else None
+        return json_response(
+            {
+                "detail": provider_detail
+                or f"Market-data provider returned HTTP {response.status_code}",
+                "provider_code": payload.get("code")
+                if isinstance(payload, dict)
+                else None,
+            },
+            status_code=502,
+        )
 
     if payload.get("status") == "error":
         return json_response(
