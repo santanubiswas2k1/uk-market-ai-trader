@@ -270,11 +270,19 @@ jobs:
           sleep 10
 
           echo "Discovered Azure Functions:"
-          az functionapp function list \
+          FUNCTION_NAMES=$(az functionapp function list \
             --resource-group "$RESOURCE_GROUP" \
             --name "${{ steps.infra.outputs.market_feed_function }}" \
             --query "[].name" \
-            -o tsv
+            -o tsv)
+
+          echo "$FUNCTION_NAMES"
+
+          FUNCTION_COUNT=$(printf '%s\n' "$FUNCTION_NAMES" | sed '/^$/d' | wc -l)
+          if [ "$FUNCTION_COUNT" -lt 2 ]; then
+            echo "Expected health and quote functions, but Azure discovered $FUNCTION_COUNT."
+            exit 1
+          fi
 
       - name: Smoke test API and frontend
         shell: bash
