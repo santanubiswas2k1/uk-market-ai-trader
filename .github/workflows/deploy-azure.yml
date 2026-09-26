@@ -125,20 +125,14 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Build market feed dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install \
-            -r market_feed/requirements.txt \
-            --target market_feed/.python_packages/lib/site-packages
-
       - name: Deploy market feed function
         uses: Azure/functions-action@v1
         with:
           app-name: ${{ steps.infra.outputs.market_feed_function }}
           package: market_feed
-          scm-do-build-during-deployment: false
-          enable-oryx-build: false
+          scm-do-build-during-deployment: true
+          enable-oryx-build: true
+          remote-build: true
 
       - name: Enable static website hosting
         shell: bash
