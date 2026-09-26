@@ -9,6 +9,34 @@ function marketFeedUrl(path) {
   return `${config.marketFeedBaseUrl.replace(/\/$/, "")}${path}`;
 }
 
+async function readJsonResponse(response, fallbackLabel) {
+  const text = await response.text();
+  let payload = {};
+
+  if (text) {
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      if (!response.ok) {
+        throw new Error(`${fallbackLabel}: HTTP ${response.status}`);
+      }
+      throw new Error(`${fallbackLabel}: server returned a non-JSON response`);
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      payload.detail || `${fallbackLabel}: HTTP ${response.status}`,
+    );
+  }
+
+  if (!text) {
+    throw new Error(`${fallbackLabel}: server returned an empty response`);
+  }
+
+  return payload;
+}
+
 export async function getHealth() {
   const response = await fetch(apiUrl("/health"));
   if (!response.ok) {
@@ -75,11 +103,7 @@ export async function getLiveQuote(symbol, market = "uk") {
     },
   );
 
-  const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(payload.detail || `Live quote failed: ${response.status}`);
-  }
-  return payload;
+  return readJsonResponse(response, "Live quote failed");
 }
 
 
