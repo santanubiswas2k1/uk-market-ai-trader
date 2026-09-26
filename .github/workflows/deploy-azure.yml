@@ -125,14 +125,46 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Package market feed dependencies for Azure Linux
+        shell: bash
+        run: |
+          rm -rf market_feed/.python_packages
+          python -m pip install --upgrade pip
+          python -m pip install \
+            --requirement market_feed/requirements.txt \
+            --target market_feed/.python_packages/lib/site-packages \
+            --platform manylinux2014_x86_64 \
+            --implementation cp \
+            --python-version 3.11 \
+            --abi cp311 \
+            --only-binary=:all:
+
+          python - <<'PY'
+          import importlib.util
+          import pathlib
+          import sys
+
+          site_packages = pathlib.Path("market_feed/.python_packages/lib/site-packages").resolve()
+          sys.path.insert(0, str(site_packages))
+          required = [
+              "httpx",
+              "jwt",
+              "azure.identity",
+              "azure.keyvault.secrets",
+          ]
+          missing = [name for name in required if importlib.util.find_spec(name) is None]
+          if missing:
+              raise SystemExit(f"Missing packaged Function dependencies: {missing}")
+          print("Packaged Function dependencies verified.")
+          PY
+
       - name: Deploy market feed function
         uses: Azure/functions-action@v1
         with:
           app-name: ${{ steps.infra.outputs.market_feed_function }}
           package: market_feed
-          scm-do-build-during-deployment: true
-          enable-oryx-build: true
-          remote-build: true
+          scm-do-build-during-deployment: false
+          enable-oryx-build: false
 
       - name: Enable static website hosting
         shell: bash
