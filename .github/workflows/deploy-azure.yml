@@ -306,6 +306,24 @@ jobs:
             --output /dev/null \
             "${{ steps.infra.outputs.market_feed_url }}/quote"
 
-          cat "$PREFLIGHT_HEADERS"
-          grep -i "^Access-Control-Allow-Origin: ${{ steps.infra.outputs.frontend_origin }}\r\{0,1\}$" "$PREFLIGHT_HEADERS"
-          grep -i "^Access-Control-Allow-Headers:.*authorization" "$PREFLIGHT_HEADERS"
+          tr -d '\r' < "$PREFLIGHT_HEADERS" | tee "${PREFLIGHT_HEADERS}.normalized"
+          grep -i -F "Access-Control-Allow-Origin: ${{ steps.infra.outputs.frontend_origin }}" "${PREFLIGHT_HEADERS}.normalized"
+          grep -i -E "^Access-Control-Allow-Headers:.*authorization" "${PREFLIGHT_HEADERS}.normalized"
+
+          echo "Testing unauthenticated quote handler returns JSON..."
+          QUOTE_BODY=$(mktemp)
+          QUOTE_STATUS=$(curl --silent --show-error \
+            --output "$QUOTE_BODY" \
+            --write-out "%{http_code}" \
+            "${{ steps.infra.outputs.market_feed_url }}/quote?symbol=AAPL")
+
+          cat "$QUOTE_BODY"
+          test "$QUOTE_STATUS" = "401"
+          python - "$QUOTE_BODY" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              payload = json.load(handle)
+          assert payload.get("detail")
+          PY
