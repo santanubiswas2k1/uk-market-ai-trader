@@ -73,50 +73,107 @@ def sector_proxy_ticker(symbol: str) -> str | None:
 
 
 
+def _extract_universe_frames(
+    frame: pd.DataFrame,
+    symbols: list[str],
+) -> dict[str, pd.DataFrame]:
+    if frame.empty:
+        return {}
+
+    results: dict[str, pd.DataFrame] = {}
+    if not isinstance(frame.columns, pd.MultiIndex):
+        if len(symbols) != 1:
+            return {}
+        single = frame.copy().rename(columns=str.lower).dropna(how="all")
+        if single.empty:
+            return {}
+        single.index = pd.to_datetime(single.index, utc=True)
+        single["symbol"] = symbols[0]
+        return {symbols[0]: single}
+
+    symbol_set = set(symbols)
+    level_scores = []
+    for level in range(frame.columns.nlevels):
+        values = {str(value) for value in frame.columns.get_level_values(level)}
+        level_scores.append(len(values & symbol_set))
+
+    ticker_level = max(range(len(level_scores)), key=level_scores.__getitem__)
+    if level_scores[ticker_level] == 0:
+        if len(symbols) != 1:
+            return {}
+        ticker_level = frame.columns.nlevels - 1
+
+    available = {
+        str(value) for value in frame.columns.get_level_values(ticker_level)
+    }
+    for symbol in symbols:
+        if symbol not in available:
+            continue
+
+        try:
+            single = frame.xs(symbol, axis=1, level=ticker_level).copy()
+        except KeyError:
+            continue
+
+        if isinstance(single.columns, pd.MultiIndex):
+            single.columns = [str(column[0]) for column in single.columns]
+        single = single.rename(columns=str.lower).dropna(how="all")
+        if single.empty or "close" not in single.columns:
+            continue
+
+        single.index = pd.to_datetime(single.index, utc=True)
+        single["symbol"] = symbol
+        results[symbol] = single
+
+    return results
+
+
+def _download_universe_batch(
+    symbols: list[str],
+    period: str,
+    *,
+    threads: bool,
+) -> dict[str, pd.DataFrame]:
+    if not symbols:
+        return {}
+
+    try:
+        frame = yf.download(
+            symbols,
+            period=period,
+            auto_adjust=False,
+            progress=False,
+            group_by="ticker",
+            threads=threads,
+        )
+    except Exception:  # noqa: BLE001
+        return {}
+
+    return _extract_universe_frames(frame, symbols)
+
+
 def load_universe_history(
     symbols: tuple[str, ...] | list[str],
     period: str = "6mo",
 ) -> dict[str, pd.DataFrame]:
-    """Load multiple symbols in one Yahoo request for lightweight market scans."""
+    """Load scanner history with a fast batch request and targeted fallbacks."""
     normalized = [symbol.upper().strip() for symbol in symbols if symbol.strip()]
     if not normalized:
         return {}
 
-    df = yf.download(
-        normalized,
-        period=period,
-        auto_adjust=False,
-        progress=False,
-        group_by="ticker",
-        threads=True,
-    )
-    if df.empty:
-        return {}
+    results = _download_universe_batch(normalized, period, threads=True)
+    missing = [symbol for symbol in normalized if symbol not in results]
 
-    results: dict[str, pd.DataFrame] = {}
-    if len(normalized) == 1:
-        single = df.copy()
-        if isinstance(single.columns, pd.MultiIndex):
-            single.columns = [column[-1] for column in single.columns]
-        single = single.rename(columns=str.lower).dropna(how="all")
-        if not single.empty:
-            single.index = pd.to_datetime(single.index, utc=True)
-            single["symbol"] = normalized[0]
-            results[normalized[0]] = single
-        return results
+    for offset in range(0, len(missing), 3):
+        chunk = missing[offset : offset + 3]
+        recovered = _download_universe_batch(chunk, period, threads=False)
+        results.update(recovered)
 
-    if not isinstance(df.columns, pd.MultiIndex):
-        return {}
-
-    level_zero = {str(value) for value in df.columns.get_level_values(0)}
-    for symbol in normalized:
-        if symbol not in level_zero:
+    missing = [symbol for symbol in normalized if symbol not in results]
+    for symbol in missing:
+        try:
+            results[symbol] = load_daily_history(symbol, period=period)
+        except Exception:  # noqa: BLE001
             continue
-        single = df[symbol].copy().rename(columns=str.lower).dropna(how="all")
-        if single.empty:
-            continue
-        single.index = pd.to_datetime(single.index, utc=True)
-        single["symbol"] = symbol
-        results[symbol] = single
 
     return results
