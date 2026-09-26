@@ -36,12 +36,8 @@ SYMBOL_MARKET_MAP = {
 }
 
 
-def cors_headers() -> dict[str, str]:
-    origin = os.getenv("FRONTEND_ORIGIN", "").rstrip("/")
+def response_headers() -> dict[str, str]:
     return {
-        "Access-Control-Allow-Origin": origin or "*",
-        "Access-Control-Allow-Headers": "Authorization, Content-Type",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
         "Cache-Control": "no-store",
     }
 
@@ -51,7 +47,7 @@ def json_response(payload: dict, status_code: int = 200) -> func.HttpResponse:
         json.dumps(payload),
         status_code=status_code,
         mimetype="application/json",
-        headers=cors_headers(),
+        headers=response_headers(),
     )
 
 
@@ -172,7 +168,7 @@ def _integer(payload: dict, key: str) -> int | None:
 
 def handle_quote(request: func.HttpRequest) -> func.HttpResponse:
     if request.method == "OPTIONS":
-        return func.HttpResponse(status_code=204, headers=cors_headers())
+        return func.HttpResponse(status_code=204, headers=response_headers())
 
     try:
         validate_token(request)
