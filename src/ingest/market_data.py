@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from functools import lru_cache
+import logging
 
 import pandas as pd
 import yfinance as yf
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_UNIVERSE = [
     "AZN.L",
@@ -173,7 +176,11 @@ def load_universe_history(
     for symbol in missing:
         try:
             results[symbol] = load_daily_history(symbol, period=period)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Scanner history fallback failed for %s: %s",
+                symbol,
+                exc,
+            )
 
     return results
