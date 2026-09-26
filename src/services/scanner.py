@@ -6,7 +6,7 @@ from math import isfinite
 import numpy as np
 import pandas as pd
 
-from src.ingest.market_data import load_daily_history
+from src.ingest.market_data import load_universe_history
 from src.ingest.news import load_live_decision_context
 from src.markets import get_market
 
@@ -291,9 +291,15 @@ def scan_market(market: str, limit: int = 10) -> dict:
     candidates: list[ScannerCandidate] = []
     failures: list[str] = []
 
+    histories = load_universe_history(universe, period="6mo")
+
     for symbol in universe:
+        history = histories.get(symbol)
+        if history is None or history.empty:
+            failures.append(symbol)
+            continue
+
         try:
-            history = load_daily_history(symbol, period="6mo")
             technical = _technical_snapshot(history)
             try:
                 context = load_live_decision_context(symbol)
