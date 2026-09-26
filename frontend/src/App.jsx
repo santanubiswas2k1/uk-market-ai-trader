@@ -139,6 +139,7 @@ export default function App() {
   const [account, setAccount] = useState(null);
   const [health, setHealth] = useState("checking");
   const [market, setMarket] = useState("uk");
+  const [activeTab, setActiveTab] = useState("overview");
   const [symbol, setSymbol] = useState("BARC.L");
   const [companyQuery, setCompanyQuery] = useState("");
   const [symbolMatches, setSymbolMatches] = useState([]);
@@ -308,6 +309,7 @@ export default function App() {
   }
 
   async function runPrediction(nextSymbol = symbol) {
+    setActiveTab("prediction");
     setBusy(true);
     setMessage("");
     setPrediction(null);
@@ -385,7 +387,8 @@ export default function App() {
       </header>
 
       <main>
-        <section className="auth-panel">
+        {!account && (
+          <section className="auth-panel">
           <div>
             <div className="eyebrow">MICROSOFT ENTRA ID</div>
             <h3>{account ? `Signed in as ${displayName}` : "Sign in to access predictions"}</h3>
@@ -404,7 +407,8 @@ export default function App() {
               </button>
             )}
           </div>
-        </section>
+          </section>
+        )}
 
         {!configured && (
           <div className="alert error">
@@ -441,21 +445,68 @@ export default function App() {
           </div>
         </section>
 
-        <section className="hero">
-          <div>
-            <div className="eyebrow">NEXT TRADING DAY RESEARCH</div>
-            <h2>Equity direction signals with market context</h2>
-            <p>
-              Five-model ensemble using Logistic Regression, Random Forest, XGBoost,
-              LightGBM and CatBoost. {currentMarket.description}
-            </p>
+        <section className="workspace-shell">
+          <div className="workspace-head">
+            <div>
+              <div className="eyebrow">RESEARCH WORKSPACE</div>
+              <h2>{currentMarket.label}</h2>
+              <p>{currentMarket.description}</p>
+            </div>
+            <div className="workspace-symbol">
+              <span>Active symbol</span>
+              <strong>{symbol || "—"}</strong>
+            </div>
           </div>
-          <div className="research-note">
-            Research and paper trading only. Predictions are probabilistic and are
-            not financial advice.
-          </div>
+
+          <nav className="workspace-tabs" aria-label="Dashboard sections">
+            {[
+              ["overview", "Overview"],
+              ["scanner", "Scanner"],
+              ["prediction", "Prediction"],
+              ["accuracy", "Accuracy"],
+            ].map(([key, label]) => (
+              <button
+                type="button"
+                key={key}
+                className={activeTab === key ? "workspace-tab active" : "workspace-tab"}
+                onClick={() => setActiveTab(key)}
+              >
+                <span>{label}</span>
+                {key === "scanner" && scanner?.candidates?.length > 0 && (
+                  <b>{scanner.candidates.length}</b>
+                )}
+                {key === "accuracy" && performance?.evaluated_predictions > 0 && (
+                  <b>{performance.evaluated_predictions}</b>
+                )}
+              </button>
+            ))}
+          </nav>
         </section>
 
+        {activeTab === "overview" && (
+          <section className="overview-grid">
+            <article className="overview-card overview-primary">
+              <div className="eyebrow">NEXT TRADING DAY</div>
+              <h3>Research signal workspace</h3>
+              <p>
+                Use Scanner to find unusual activity, Prediction for the full ensemble,
+                and Accuracy to review real forward performance.
+              </p>
+            </article>
+            <article className="overview-card">
+              <span>Model stack</span>
+              <strong>5 direction + 5 return models</strong>
+              <small>Logistic, RF, XGBoost, LightGBM, CatBoost + return ensemble</small>
+            </article>
+            <article className="overview-card">
+              <span>Research mode</span>
+              <strong>Paper trading</strong>
+              <small>Probabilistic research only — not financial advice</small>
+            </article>
+          </section>
+        )}
+
+        {activeTab === "overview" && (
         <section className="live-market-panel">
           <div className="live-market-heading">
             <div>
@@ -558,7 +609,9 @@ export default function App() {
             </>
           )}
         </section>
+        )}
 
+        {activeTab === "scanner" && (
         <section className="scanner-panel">
           <div className="ensemble-heading">
             <div>
@@ -669,6 +722,7 @@ export default function App() {
                               setSymbol(candidate.symbol);
                               setSelectedCompany(null);
                               setCompanyQuery("");
+                              setActiveTab("prediction");
                               runPrediction(candidate.symbol);
                             }}
                           >
@@ -695,7 +749,9 @@ export default function App() {
             </>
           )}
         </section>
+        )}
 
+        {activeTab === "accuracy" && (
         <section className="performance-panel">
           <div className="ensemble-heading">
             <div>
@@ -823,7 +879,10 @@ export default function App() {
             </>
           )}
         </section>
+        )}
 
+        {activeTab === "prediction" && (
+        <>
         <section className="search-panel">
           <form
             onSubmit={(event) => {
@@ -897,6 +956,7 @@ export default function App() {
                   setSymbol(item);
                   setSelectedCompany(null);
                   setCompanyQuery("");
+                  setActiveTab("prediction");
                   runPrediction(item);
                 }}
                 disabled={!account || busy}
@@ -1136,6 +1196,8 @@ export default function App() {
               </article>
             </section>
           </>
+        )}
+        </>
         )}
       </main>
 
