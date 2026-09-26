@@ -160,6 +160,14 @@ resource marketFeedFunction 'Microsoft.Web/sites@2023-12-01' = {
           value: 'python'
         }
         {
+          name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
+          value: 'true'
+        }
+        {
+          name: 'ENABLE_ORYX_BUILD'
+          value: 'true'
+        }
+        {
           name: 'AZURE_TENANT_ID'
           value: subscription().tenantId
         }
