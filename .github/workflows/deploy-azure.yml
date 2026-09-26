@@ -294,3 +294,18 @@ jobs:
           curl --fail --retry 8 --retry-delay 5 "${{ steps.infra.outputs.frontend_url }}"
           curl --fail --retry 8 --retry-delay 10 \
             "${{ steps.infra.outputs.market_feed_url }}/health"
+
+          echo "Testing browser CORS preflight for market feed..."
+          PREFLIGHT_HEADERS=$(mktemp)
+          curl --fail --silent --show-error \
+            --request OPTIONS \
+            --header "Origin: ${{ steps.infra.outputs.frontend_origin }}" \
+            --header "Access-Control-Request-Method: GET" \
+            --header "Access-Control-Request-Headers: authorization" \
+            --dump-header "$PREFLIGHT_HEADERS" \
+            --output /dev/null \
+            "${{ steps.infra.outputs.market_feed_url }}/quote"
+
+          cat "$PREFLIGHT_HEADERS"
+          grep -i "^Access-Control-Allow-Origin: ${{ steps.infra.outputs.frontend_origin }}\r\{0,1\}$" "$PREFLIGHT_HEADERS"
+          grep -i "^Access-Control-Allow-Headers:.*authorization" "$PREFLIGHT_HEADERS"
