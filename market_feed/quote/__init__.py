@@ -25,6 +25,16 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         from shared_code.market_feed import handle_quote
 
         return handle_quote(req)
+    except ModuleNotFoundError as exc:
+        return _error_response(
+            f"Market feed dependency missing: {exc.name}",
+            status_code=500,
+        )
+    except ImportError as exc:
+        return _error_response(
+            f"Market feed import error: {exc.name or type(exc).__name__}",
+            status_code=500,
+        )
     except Exception as exc:  # noqa: BLE001
         return _error_response(
             f"Market feed runtime error: {type(exc).__name__}",
