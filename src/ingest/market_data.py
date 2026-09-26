@@ -108,7 +108,7 @@ def load_universe_history(
     if not isinstance(df.columns, pd.MultiIndex):
         return {}
 
-    level_zero = set(str(value) for value in df.columns.get_level_values(0))
+    level_zero = {str(value) for value in df.columns.get_level_values(0)}
     for symbol in normalized:
         if symbol not in level_zero:
             continue
