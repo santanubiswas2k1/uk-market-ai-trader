@@ -174,6 +174,6 @@ def load_universe_history(
         try:
             results[symbol] = load_daily_history(symbol, period=period)
         except Exception:  # noqa: BLE001
-            continue
+            pass
 
     return results
