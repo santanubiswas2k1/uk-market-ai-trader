@@ -70,3 +70,53 @@ def sector_proxy_ticker(symbol: str) -> str | None:
     if not sector:
         return None
     return SECTOR_ETFS.get(sector.casefold())
+
+
+
+def load_universe_history(
+    symbols: tuple[str, ...] | list[str],
+    period: str = "6mo",
+) -> dict[str, pd.DataFrame]:
+    """Load multiple symbols in one Yahoo request for lightweight market scans."""
+    normalized = [symbol.upper().strip() for symbol in symbols if symbol.strip()]
+    if not normalized:
+        return {}
+
+    df = yf.download(
+        normalized,
+        period=period,
+        auto_adjust=False,
+        progress=False,
+        group_by="ticker",
+        threads=True,
+    )
+    if df.empty:
+        return {}
+
+    results: dict[str, pd.DataFrame] = {}
+    if len(normalized) == 1:
+        single = df.copy()
+        if isinstance(single.columns, pd.MultiIndex):
+            single.columns = [column[-1] for column in single.columns]
+        single = single.rename(columns=str.lower).dropna(how="all")
+        if not single.empty:
+            single.index = pd.to_datetime(single.index, utc=True)
+            single["symbol"] = normalized[0]
+            results[normalized[0]] = single
+        return results
+
+    if not isinstance(df.columns, pd.MultiIndex):
+        return {}
+
+    level_zero = set(str(value) for value in df.columns.get_level_values(0))
+    for symbol in normalized:
+        if symbol not in level_zero:
+            continue
+        single = df[symbol].copy().rename(columns=str.lower).dropna(how="all")
+        if single.empty:
+            continue
+        single.index = pd.to_datetime(single.index, utc=True)
+        single["symbol"] = symbol
+        results[symbol] = single
+
+    return results
