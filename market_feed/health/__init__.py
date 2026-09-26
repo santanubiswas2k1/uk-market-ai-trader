@@ -1,12 +1,18 @@
+import json
+
 import azure.functions as func
-from shared import json_response
 
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
-    return json_response(
-        {
-            "status": "ok",
-            "service": "market-feed",
-            "provider": "Twelve Data",
-        }
+    return func.HttpResponse(
+        json.dumps(
+            {
+                "status": "ok",
+                "service": "market-feed",
+                "provider": "Twelve Data",
+            }
+        ),
+        status_code=200,
+        mimetype="application/json",
+        headers={"Cache-Control": "no-store"},
     )
