@@ -141,7 +141,10 @@ export async function getScanner(market = "uk", limit = 10) {
     candidates: (payload.candidates || []).map((candidate) => ({
       ...candidate,
       score: Math.round((candidate.probability_jump_3d_5pct || 0) * 100),
-      activity: `${((candidate.probability_jump_3d_5pct || 0) * 100).toFixed(1)}% jump probability`,
+      activity: [
+        `${((candidate.probability_jump_3d_5pct || 0) * 100).toFixed(1)}% jump`,
+        `exp max ${((candidate.expected_max_return_3d || 0) * 100).toFixed(1)}%`,
+      ].join(" · "),
     })),
   };
 }
