@@ -121,32 +121,27 @@ export async function getPerformance(market = "") {
 
 export async function getScanner(market = "uk", limit = 10) {
   const token = await getAccessToken();
-  const response = await fetch(
-    apiUrl(
-      `/scanner?market=${encodeURIComponent(market)}&limit=${encodeURIComponent(limit)}`,
-    ),
-    {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    },
-  );
+  const path = market === "us"
+    ? `/jump-scanner?limit=${encodeURIComponent(limit)}`
+    : `/scanner?market=${encodeURIComponent(market)}&limit=${encodeURIComponent(limit)}`;
+  const response = await fetch(apiUrl(path), {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
 
-  const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(payload.detail || `Scanner request failed: ${response.status}`);
+  const payload = await readJsonResponse(response, "Scanner request failed");
+  if (market !== "us") {
+    return payload;
   }
-  return payload;
-}
 
-export async function getJumpScanner(limit = 10) {
-  const token = await getAccessToken();
-  const response = await fetch(
-    apiUrl(`/jump-scanner?limit=${encodeURIComponent(limit)}`),
-    {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    },
-  );
-
-  return readJsonResponse(response, "Jump scanner failed");
+  return {
+    ...payload,
+    method: payload.model_version,
+    jump_model: true,
+    candidates: (payload.candidates || []).map((candidate) => ({
+      ...candidate,
+      score: Math.round((candidate.probability_jump_3d_5pct || 0) * 100),
+      activity: `${((candidate.probability_jump_3d_5pct || 0) * 100).toFixed(1)}% jump probability`,
+    })),
+  };
 }
