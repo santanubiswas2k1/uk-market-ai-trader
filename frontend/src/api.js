@@ -69,7 +69,6 @@ export async function getPrediction(symbol, market = "uk") {
   return payload;
 }
 
-
 export async function searchSymbols(query, market = "uk") {
   const token = await getAccessToken();
   const response = await fetch(
@@ -85,7 +84,6 @@ export async function searchSymbols(query, market = "uk") {
   }
   return payload.results || [];
 }
-
 
 export async function getLiveQuote(symbol, market = "uk") {
   if (!config.marketFeedBaseUrl) {
@@ -106,7 +104,6 @@ export async function getLiveQuote(symbol, market = "uk") {
   return readJsonResponse(response, "Live quote failed");
 }
 
-
 export async function getPerformance(market = "") {
   const token = await getAccessToken();
   const query = market ? `?market=${encodeURIComponent(market)}` : "";
@@ -121,7 +118,6 @@ export async function getPerformance(market = "") {
   }
   return payload;
 }
-
 
 export async function getScanner(market = "uk", limit = 10) {
   const token = await getAccessToken();
@@ -140,4 +136,17 @@ export async function getScanner(market = "uk", limit = 10) {
     throw new Error(payload.detail || `Scanner request failed: ${response.status}`);
   }
   return payload;
+}
+
+export async function getJumpScanner(limit = 10) {
+  const token = await getAccessToken();
+  const response = await fetch(
+    apiUrl(`/jump-scanner?limit=${encodeURIComponent(limit)}`),
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    },
+  );
+
+  return readJsonResponse(response, "Jump scanner failed");
 }
