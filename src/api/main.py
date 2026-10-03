@@ -6,12 +6,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.markets import MARKETS
 from src.security.auth import validate_bearer_token
+from src.services.jump_model import scan_us_jumps
 from src.services.prediction import predict_symbol
 from src.services.prediction_history import performance_summary, record_prediction
 from src.services.scanner import scan_market
 from src.services.symbols import search_symbols
 
-app = FastAPI(title="Global Market AI Trader", version="0.6.0")
+app = FastAPI(title="Global Market AI Trader", version="0.7.0")
 
 frontend_origin = os.getenv("FRONTEND_ORIGIN", "").strip()
 if frontend_origin:
@@ -81,6 +82,15 @@ def scanner(claims: AuthClaims, market: str = "uk", limit: int = 10) -> dict:
     """Return explainable movement candidates for the selected market."""
     try:
         return scan_market(market=market, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/jump-scanner")
+def jump_scanner(claims: AuthClaims, limit: int = 10) -> dict:
+    """Rank liquid US equities by calibrated probability of a +5% move within 3 sessions."""
+    try:
+        return scan_us_jumps(limit=limit)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
